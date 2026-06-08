@@ -20,7 +20,7 @@
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb breadcrumb-style1">
                         <li class="breadcrumb-item">
-                            <a href="{{ route('dashboard')}}">Dashboard</a>
+                            <a href="{{ route('dashboard') }}">Dashboard</a>
                         </li>
                         <li class="breadcrumb-item">Radius</li>
                         <li class="breadcrumb-item active">Search Subscribers</li>
@@ -31,74 +31,57 @@
     </div>
 
     <div class="row">
-      <div class="col-sm-12">
-        <div class="card">
-          <div class="card-body">
-              <div class="form-group col-sm-6">
-                  <form class="forms-sample" action="{{ route('search.subscriber')}}">
-                      <div class="input-group input-group-sm mb-3">
-                              <div class="input-group-prepend">
-                              <label class="input-group-text" for="inputGroupSelect01">Select Location</label>
-                              </div>
-                              <select class="" name="loca" class="custom-select">
-                                  @if (!$loca)
-                                      <option value="" selected></option>
-                                  @else
-                                      <option value=""></option>
-                                  @endif
-                                  {{-- @if (isset($location->name)) --}}
-                                      @foreach ($location as $loc)
-                                      @if ($loc->name==$loca)
-                                          <option value="{{ $loc->name }}" selected>{{ $loc->name }}</option>
-                                      @else
-                                          <option value="{{ $loc->name }}">{{ $loc->name }}</option>
-                                      @endif
-                                      @endforeach
-                                  {{-- @endif --}}
-                                  </select>
-                                  <input type="search" class="form-control" placeholder="Customer Name/Username/Mobile/Address/MAC" aria-label="Customer Name/Username/Mobile/Address/MAC" aria-describedby="basic-addon2"  name="name" value="{{ $name }}">
-                                  <div class="input-group-append">
-                                      <button class="btn btn-outline-secondary" type="submit">Search</button>
-                                  </div>
-                          </div>
-                      </form>
-                  </div>
-              </div>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form class="forms-sample" action="{{ route('search.subscriber') }}" method="GET">
+                        <div class="input-group input-group-sm mb-3">
+                            <label class="input-group-text" for="inputGroupSelect01">Location</label>
+                            <select class="form-select" name="loca" id="inputGroupSelect01">
+                                <option value="">Select Location</option>
+                                @foreach ($location as $loc)
+                                    <option value="{{ $loc->name }}" {{ ($loca == $loc->name) ? 'selected' : '' }}>{{ $loc->name }}</option>
+                                @endforeach
+                            </select>
+                            <input type="search" class="form-control" placeholder="Customer Name/Username/Mobile/Address/MAC" aria-label="Search" name="name" value="{{ $name }}">
+                            <button class="btn btn-outline-secondary" type="submit">Search</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-      </div>
-  </div>
-  @if($name)
-  <div class="row">
-    <div class="col-sm-12">
-      <div class="card">
-        <div class="card-body">
-          <div class="table-responsive">
-            <table id="search-subscriber" class="datatable table table-striped table-bordered table-hover table-center mb-0">
-              <thead>
-                <tr style="boder:1px solid black;">
-                  <th>User Id</th>
-                                  <th>User Name</th>
-                                  <th>Name</th>
-                                  <th>Mobile</th>
-                                  <th>Online</th>
-                                  <th>Renewal Date</th>
-                                  <th>Expiry Date</th>
-                </tr>
-              </thead>
-              <tbody>
-
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-          <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
     </div>
 
-  </div>
-  @endif
-
+    @if($name)
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="search-subscriber" class="datatable table table-striped table-bordered table-hover table-center mb-0">
+                            <thead>
+                                <tr">
+                                    <th>User Id</th>
+                                    <th>User Name</th>
+                                    <th>Name</th>
+                                    <th>Mobile</th>
+                                    <th>Online</th>
+                                    <th>Renewal Date</th>
+                                    <th>Expiry Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <a href="javascript: history.back()" class="btn btn-primary btn-sm mt-3">Back</a>
+        </div>
+    </div>
+    @endif
 </div>
+
 @endsection
 
 @push('page-js')

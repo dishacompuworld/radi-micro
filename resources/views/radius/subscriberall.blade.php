@@ -19,7 +19,7 @@
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb breadcrumb-style1">
                         <li class="breadcrumb-item">
-                            <a href="{{ route('dashboard')}}">Dashboard</a>
+                            <a href="{{ route('dashboard') }}">Dashboard</a>
                         </li>
                         <li class="breadcrumb-item">Radius</li>
                         <li class="breadcrumb-item active">Search User All Location</li>
@@ -30,63 +30,54 @@
     </div>
     
     <div class="row">
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <!-- Subscribers -->
-                            <div class="form-group col-12 col-md-12">
-                                <form class="forms-sample" action="{{ route('search.subscriberall') }}">
-                                    <div class="input-group input-group-sm mb-3">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text fixed-size-span" id="inputGroup-sizing-sm">Customer Name / Username / Mobile / Address / MAC</span>
-                                        </div>
-                                        <input type="search" class="form-control" placeholder="Customer Name/Username/Mobile/Address/MAC" aria-label="Customer Name/Username/Mobile/Address/MAC" aria-describedby="basic-addon2"  name="name" value="{{ $name }}">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-secondary" type="submit">Search</button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <!-- /Subscribers -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <!-- Subscribers -->
+                    <form class="forms-sample" action="{{ route('search.subscriberall') }}" method="GET">
+                        <div class="input-group input-group-sm mb-3">
+                            <span class="input-group-text" id="inputGroup-sizing-sm">Customer Name / Username / Mobile / Address / MAC</span>
+                            <input type="search" class="form-control" placeholder="Customer Name/Username/Mobile/Address/MAC" aria-label="Customer Name/Username/Mobile/Address/MAC" aria-describedby="inputGroup-sizing-sm" name="name" value="{{ $name }}">
+                            <button class="btn btn-outline-secondary" type="submit">Search</button>
                         </div>
-                    </div>
+                    </form>
+                    <!-- /Subscribers -->
                 </div>
             </div>
         </div>
     </div>
 
-      @if($name)
-      <div class="row">
-        <div class="col-sm-12">
-          <div class="card">
-            <div class="card-body">
-              <div class="table-responsive">
-                <table id="search-subscriberall" class="datatable table table-striped table-bordered table-hover table-center mb-0">
-                  <thead>
-                    <tr style="boder:1px solid black;">
-                      <th>User Id</th>
-                      <th>Name</th>
-                      <th>Location</th>
-                      <th>Online</th>
-                      <th>Static IP</th>
-                      <th>Renewal</th>
-                      <th>Expiry</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                  </tbody>
-                </table>
-              </div>
+    @if($name)
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="search-subscriberall" class="datatable table table-striped table-bordered table-hover table-center mb-0">
+                            <thead>
+                                <tr">
+                                    <th>User Id</th>
+                                    <th>Name</th>
+                                    <th>Location</th>
+                                    <th>Online</th>
+                                    <th>Static IP</th>
+                                    <th>Renewal</th>
+                                    <th>Expiry</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-          </div>
-              <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
+            <a href="javascript: history.back()" class="btn btn-primary btn-sm mt-3">Back</a>
         </div>
     </div>
-  @endif
+    @endif
 </div>
+
 @endsection
 @push('page-js')
 @if($name)

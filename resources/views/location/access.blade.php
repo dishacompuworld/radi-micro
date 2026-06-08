@@ -13,7 +13,7 @@
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb breadcrumb-style1">
                         <li class="breadcrumb-item">
-                            <a href="{{ route('dashboard')}}">Dashboard</a>
+                            <a href="{{ route('dashboard') }}">Dashboard</a>
                         </li>
                         <li class="breadcrumb-item">Radius</li>
                         <li class="breadcrumb-item active">Access Requests Logs</li>
@@ -24,27 +24,22 @@
     </div>
 
     <div class="row">
-        <div class="col-sm-12">
+        <div class="col-12">
             <div class="card">
                 <div class="card-body">
-                    <form class="forms-sample" action="{{ route('show.accesslogs')}}" method="get">
-                        <!-- Replaced old col-sm-3 with d-flex for better alignment -->
-                        <div class="d-flex align-items-center" style="max-width: 350px;">
-                            <div class="input-group input-group-sm">
-                                <!-- BS5 uses plain span, no input-group-prepend needed -->
-                                <span class="input-group-text" id="inputGroup-sizing-sm">Select Location</span>
+                    <form class="forms-sample" action="{{ route('show.accesslogs') }}" method="GET">
+                        <div class="input-group input-group-sm" style="max-width: 400px;">
+                            <span class="input-group-text" id="inputGroup-sizing-sm">Select Location</span>
+                            
+                            <select class="form-select" id="inputGroupSelect03" name="location" onchange="this.form.submit()">
+                                <option value="" {{ !$location ? 'selected' : '' }}>Select Location</option>
                                 
-                                <!-- BS5 uses form-select instead of custom-select -->
-                                <select class="form-select" id="inputGroupSelect03" name="location" onchange="this.form.submit()">
-                                    <option value="" @selected(!$location)>Select Location</option>
-                                    
-                                    @foreach ($slocations as $loc)
-                                        <option value="{{ $loc->name }}" @selected($loc->name == $location)>
-                                            {{ $loc->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                                @foreach ($slocations as $loc)
+                                    <option value="{{ $loc->name }}" {{ $loc->name == $location ? 'selected' : '' }}>
+                                        {{ $loc->name }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
                     </form>
                 </div>
@@ -53,15 +48,14 @@
     </div>
 
     @if($location)
-    <div class="row">
-        <div class="col-sm-12">
+    <div class="row mt-4">
+        <div class="col-12">
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table id="acccess-logs" class="datatable table table-striped table-bordered table-hover table-center mb-0">
+                        <table id="access-logs" class="datatable table table-striped table-bordered table-hover table-center mb-0">
                             <thead>
-                                <!-- Fixed typo: boder -> border -->
-                                <tr">
+                                <tr>
                                     <th>User Id</th>
                                     <th>Date</th>
                                     <th>Username</th>
@@ -71,7 +65,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-
                             </tbody>
                         </table>
                     </div>
@@ -80,15 +73,15 @@
         </div>
     </div>
     @endif
-
 </div>
+
 @endsection
 
 @push('page-js')
 @if($location)
 <script>
     $(document).ready(function() {
-        var table = $('#acccess-logs').DataTable({
+        var table = $('#access-logs').DataTable({
             processing: true,
             serverSide: true,
             ajax: "{{ $urll }}",
