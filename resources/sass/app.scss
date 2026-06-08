@@ -1,0 +1,14 @@
+@use 'sass:math';
+
+//icons
+// @use 'bootstrap-icons/font/bootstrap-icons.scss';
+
+// Variables
+@import 'variables'; // Keep this as @import if it's meant to override Bootstrap variables globally.
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap'; // Keep this as @import to consume global variables.
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
+
+
