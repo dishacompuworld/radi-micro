@@ -46,8 +46,10 @@
                 @include('layouts.partials.navbar')
 
                 
-                <div class="content-wrapper">
-                    @yield('content')
+                <div class="content-wrapper d-flex flex-column">
+                    <div class="flex-grow-1">
+                        @yield('content')
+                    </div>
                     @include('layouts.partials.footer')
                     <div class="content-backdrop fade"></div>
                 </div>

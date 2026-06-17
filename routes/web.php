@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerStats;
-use App\Http\Controllers\MicrotikController;
-use App\Http\Controllers\PPPoEController;
+use App\Http\Controllers\NewMicrotikController;
+use App\Http\Controllers\PPPoEUserController;
 use App\Http\Controllers\FetchapiController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PackageController;
@@ -52,23 +52,24 @@ Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
 
 
     Route::resource('server', ServerController::class);
+
     Route::resource('permissions',PermissionController::class)->only(['index','store','update','destroy']);
     Route::resource('roles',RoleController::class);
 
     Route::get('stats', [ServerStats::class, 'index'])->name('stats.index');
     Route::get('stats/{id}', [ServerController::class, 'show'])->name('stats.show');
 
-    Route::get('system-health', [MicrotikController::class, 'getSystemHealth'])->name('microtik.system.health');
-    Route::get('ip-neighbors', [MicrotikController::class, 'getIpNeighbors'])->name('microtik.ip.neighbors');
-    Route::get('shedule', [MicrotikController::class, 'shedule'])->name('shedule.show');
-    Route::get('scripts', [MicrotikController::class, 'readScripts'])->name('microtik.scripts');
-    Route::get('showservices', [MicrotikController::class, 'showServices'])->name('show.services');
-    Route::get('logs', [MicrotikController::class, 'viewLogs'])->name('microtik.logs');
-    Route::get('log', [MicrotikController::class, 'viewLog'])->name('microtik.log');
-    Route::get('systemhistory', [MicrotikController::class, 'getSystemHistory'])->name('system.history');
-    Route::get('viewCommand', [MicrotikController::class, 'viewCommand'])->name('view.command');
-
-    Route::get('pppoe/allactivenew', [PPPoEController::class, 'allactivenew'])->name('pppoe.allactivenew');
+    Route::get('system-health', [NewMicrotikController::class, 'getSystemHealth'])->name('microtik.system.health');
+    Route::get('ip-neighbors', [NewMicrotikController::class, 'getIpNeighbors'])->name('microtik.ip.neighbors');
+    Route::get('shedule', [NewMicrotikController::class, 'shedule'])->name('shedule.show');
+    Route::get('scripts', [NewMicrotikController::class, 'readScripts'])->name('microtik.scripts');
+    Route::get('showservices', [NewMicrotikController::class, 'showServices'])->name('show.services');
+    Route::get('logs', [NewMicrotikController::class, 'viewLogs'])->name('microtik.logs');
+    Route::get('log', [NewMicrotikController::class, 'viewLog'])->name('microtik.log');
+    Route::get('systemhistory', [NewMicrotikController::class, 'getSystemHistory'])->name('system.history');
+    Route::get('viewCommand', [NewMicrotikController::class, 'viewCommand'])->name('view.command');
+    Route::get('traffic-chart/{serverId}/{username}', [NewMicrotikController::class, 'showTrafficChart'])->name('traffic.chart');
+    Route::get('ppp-traffic', [NewMicrotikController::class, 'getPppTraffic'])->name('microtik.ppp.traffic');
 
     Route::get('locationdetails',[FetchapiController::class, 'locationdetails'])->name('locationdetails.show');
     Route::get('showsubscriber',[FetchapiController::class, 'subscriberDetails'])->name('subscriber.show');
@@ -137,11 +138,21 @@ Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
     Route::get('/svg1', [PrtgApiController::class, 'generateSVG1']); 
     Route::get('/svg2', [PrtgApiController::class, 'generateSVG2']);
     Route::get('livegraph', [PrtgApiController::class, 'liveGraph'])->name('live.graph');
+    Route::get('livegraph/image', [PrtgApiController::class, 'getLiveGraphImage'])->name('live.graph.image');
     Route::get('messsages', [PrtgApiController::class, 'getMessages'])->name('ptrg.messsages');
-    // Route::get('live-graph', [PrtgApiController::class, 'liveGraph'])->name('live.graph');
-    Route::get('live-graph', [PrtgApiController::class, 'liveGraph'])->name('live.graph');
+    Route::get('live-graph', [PrtgApiController::class, 'showLiveGraph'])->name('live.graph.page'); // Renamed for clarity
     Route::get('checkmseb',[PrtgApiController::class, 'getMsebStatusData'])->name('check.mseb');
     Route::get('mseb-info', [PrtgApiController::class, 'getMsebInfoAjax'])->name('admin.dashboard.mseb');
+
+
+    Route::get('pppoe/newactive', [PPPoEUserController::class, 'newactiveserver'])->name('pppoe.newactive');
+    // Route::get('pppoe/newactive', [PPPoEUserController::class, 'testactiveserver'])->name('pppoe.newactive');
+    
+    Route::get('pppoe/allactivenew', [PPPoEUserController::class, 'allactivenew'])->name('pppoe.allactivenew');
+    Route::get('pppoe/deleted', [PPPoEUserController::class, 'deleted'])->name('pppoe.deleted');
+    Route::get('pppoe/delet', [PPPoEUserController::class, 'delet'])->name('pppoe.delet');
+    Route::get('pppoe/ping', [PPPoEUserController::class, 'ping'])->name('pppoe.ping');
+    Route::get('pppoe/real-time-ping', [PPPoEUserController::class, 'realTimePing']);
 
     Route::get('settings',[SettingController::class,'index'])->name('settings');
 

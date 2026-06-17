@@ -1,5 +1,4 @@
-<!-- filepath: /c:/inetpub/wwwroot/microtik-radius/resources/views/admin/microtik/traffic-chart.blade.php -->
-@extends('admin.layouts.header')
+@extends('layouts.admin')
 
 @push('page-css')
 <!-- Add any additional CSS here -->
@@ -13,18 +12,25 @@
 </style>
 @endpush
 
-@push('page-header')
-<div class="col-sm-7 col-auto">
-    <h3 class="page-title">Traffic Chart</h3>
-    <ul class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-        <li class="breadcrumb-item active">Traffic Chart</li>
-    </ul>
-</div>
-@endpush
-
 @section('content')
-<div class="row">
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">User Live Traffic</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb breadcrumb-style1 mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">Microtik</li>
+                    <li class="breadcrumb-item active">User Live Traffic</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+
+    <div class="row">
     <div class="col-md-12">
         <div class="card">
             <div class="card-body">
@@ -68,21 +74,25 @@
     function fetchTrafficData() {
         const serverId = '{{ $serverId }}';
         const username = '{{ $username }}';
+        const trafficUrl = '{{ route("microtik.ppp.traffic") }}';
         const today = new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 
         function updateChart() {
-            fetch(`ppp-traffic?sserver=${serverId}&interface=<pppoe-${username}>`)
+            const interfaceName = `<pppoe-${username}>`;
+            fetch(`${trafficUrl}?sserver=${serverId}&interface=${encodeURIComponent(interfaceName)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        alert(data.error);
+                        console.error('Traffic fetch error:', data.error);
                         return;
                     }
 
+                    console.log('Traffic payload:', { interfaceName, data });
+
                     const timestamp = new Date().toLocaleTimeString();
                     chartData.labels.push(timestamp);
-                    chartData.datasets[0].data.push(data['rx-mbps']);
-                    chartData.datasets[1].data.push(data['tx-mbps']);
+                    chartData.datasets[0].data.push(Number(data['tx-mbps']) || 0);
+                    chartData.datasets[1].data.push(Number(data['rx-mbps']) || 0);
 
                     // Keep the last 50 data points
                     if (chartData.labels.length > 50) {
@@ -193,4 +203,6 @@
         });
     }
 </script>
+
+</div>
 @endsection

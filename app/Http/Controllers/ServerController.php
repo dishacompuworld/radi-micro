@@ -44,10 +44,10 @@ class ServerController extends Controller
     public function __construct()
     {
         // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
-        // $this->middleware('permission:add-server',['only' => ['create','store']]);
-        // $this->middleware('permission:view-server',['only' => ['index','show']]);
-        // $this->middleware('permission:update-server',['only' => ['edit','update']]);
-        // $this->middleware('permission:delete-server',['only' => ['destroy']]);
+        $this->middleware('permission:add-server',['only' => ['create','store']]);
+        $this->middleware('permission:view-server',['only' => ['index','show']]);
+        $this->middleware('permission:update-server',['only' => ['edit','update']]);
+        $this->middleware('permission:delete-server',['only' => ['destroy']]);
     }
 
 
@@ -143,7 +143,7 @@ class ServerController extends Controller
         $servers = Server::find($server->id);
         try {
             $title = "Server Details";
-            return view('admin.server.show', compact('title', 'server','servers'));
+            return view('server.show', compact('title', 'server','servers'));
         } catch (\Exception $e) {
             Log::error("Error in server show: " . $e->getMessage());
             return back()->with('error', 'Failed to load server details');
@@ -159,7 +159,7 @@ class ServerController extends Controller
         $servers = Server::find($server->id);
         try {
             $title = "Edit Server";
-            return view('admin.server.update', compact('title', 'server','servers'));
+            return view('server.update', compact('title', 'server','servers'));
         } catch (\Exception $e) {
             Log::error("Error in server edit: " . $e->getMessage());
             return back()->with('error', 'Failed to load edit form');

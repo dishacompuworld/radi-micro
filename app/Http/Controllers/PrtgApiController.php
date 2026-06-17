@@ -34,13 +34,13 @@ class PrtgApiController extends Controller
      */
     public function __construct()
     {
-        // $this->middleware('permission:view-prtg', ['only' => [
-        //     'getfirstchart', 'getsecondchart', 
-        //     'generateSVG1', 'downsensors',
-        //     'generateSVG2', 'historygraph', 
-        //     'allsensors', 'upsensors', 
-        //     'getMsebInfoAjax', 'getProcessedMsebData'
-        //     ]]);
+        $this->middleware('permission:view-prtg', ['only' => [
+            'getfirstchart', 'getsecondchart', 
+            'generateSVG1', 'downsensors',
+            'generateSVG2', 'historygraph', 'showLiveGraph', 'getLiveGraphImage',
+            'allsensors', 'upsensors', 
+            'getMsebInfoAjax', 'getProcessedMsebData'
+            ]]);
         // // $this->middleware('permission:test-api', ['only' => ['apitest']]);
         
         // Load PRTG API configuration
@@ -205,6 +205,7 @@ class PrtgApiController extends Controller
 
     public function historygraph(Request $request){
         $title = "PRTG History Grabh";
+        date_default_timezone_set("Asia/Kolkata");
 
         $prtg_link = env('PRTG_URL',null);
         $prtg_apikey = env('PRTG_API_KEY',null);
@@ -227,7 +228,7 @@ class PrtgApiController extends Controller
         $ednew = new \DateTime($edtime);
         $ednew1 = $ednew->format('Y-m-d-H-i-s');
 
-        // return $sdnew1 . ' ' . $ednew1;
+        //  return $sdnew1 . ' ' . $ednew1;
 
 
         $response = Http::get($prtg_link.'/chart.svg?id='. $graph_id . '&avg=10&sdate=' . $sdnew1 . '&edate=' . $ednew1 . '&width=700&height=300&graphid=-1&graphstyling=showLegend%3D%270%27+baseFontSize%3D%276%27&hide=-4&apitoken='. $prtg_apikey);
@@ -279,13 +280,24 @@ class PrtgApiController extends Controller
         }
     }
 
-    public function liveGraph(Request $request)
+    /**
+     * Displays the live graph page.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showLiveGraph()
+    {
+        return view('prtg.livegraph', ['title' => 'Live Graph']);
+    }
+
+    /**
+     * Fetches and returns the live graph SVG content from PRTG.
+     *
+     * @return \Illuminate\Http\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory
+     */
+    public function getLiveGraphImage()
     {
         try {
-            if (!$request->ajax()) {
-                return view('prtg.livegraph', ['title' => 'Live Graph']);
-            }
-
             $response = $this->makeApiRequest('/chart.svg', [
                 'type' => 'graph',
                 'width' => 1000,
@@ -297,34 +309,17 @@ class PrtgApiController extends Controller
 
             if ($response->successful()) {
                 $svgContent = $response->body();
-                
-                if (empty($svgContent)) {
-                    Log::error('Empty SVG content received from PRTG API');
-                    return response()->json(['error' => 'Empty graph data received']);
+                if (!empty($svgContent) && str_contains($svgContent, '<svg')) {
+                    return response($svgContent, 200)->header('Content-Type', 'image/svg+xml');
                 }
-
-                // Ensure the content is actually SVG
-                if (!str_contains($svgContent, '<svg')) {
-                    Log::error('Invalid SVG content received', ['content' => substr($svgContent, 0, 100)]);
-                    return response()->json(['error' => 'Invalid graph data received']);
-                }
-
-                if (!Storage::disk('public')->put('livegraph.svg', $svgContent)) {
-                    Log::error('Failed to write SVG file to storage');
-                    return response()->json(['error' => 'Failed to save graph']);
-                }
-
-                return response()->json(['success' => true]);
             }
-
-            Log::error('PRTG API request failed', ['status' => $response->status()]);
-            return response()->json(['error' => 'Failed to fetch graph data']);
-
+            return response('Failed to fetch graph', 500);
         } catch (\Exception $e) {
             Log::error('Exception in liveGraph', ['error' => $e->getMessage()]);
-            return response()->json(['error' => $e->getMessage()]);
+            return response('Error: ' . $e->getMessage(), 500);
         }
     }
+
 
     public function getMessages(Request $request)
     {

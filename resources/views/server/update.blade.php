@@ -1,23 +1,25 @@
-@extends('admin.layouts.header')
-
-@push('page-css')
-	<!-- Datetimepicker CSS -->
-	<link rel="stylesheet" href="{{asset('assets/css/bootstrap-datetimepicker.min.css')}}">
-@endpush
-
-@push('page-header')
-<div class="col-sm-12">
-	<h3 class="page-title">Add Server</h3>
-	<ul class="breadcrumb">
-		<li class="breadcrumb-item"><a href="{{route('dashboard')}}">Dashboard</a></li>
-		<li class="breadcrumb-item active">Add Server</li>
-	</ul>
-</div>
-@endpush
-
+@extends('layouts.admin')
 
 @section('content')
-<div class="row">
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-3">Edit Server</h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb breadcrumb-style1">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="breadcrumb-item">Microtik</li>
+                        <li class="breadcrumb-item active">Edit Server</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
 	<div class="col-sm-12">
 		<div class="card">
 			<div class="card-body custom-edit-service">
@@ -72,15 +74,11 @@
                 </div>
 				<!-- /Update Server -->
 
-			</div>
-		</div>
-	</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
 </div>
 @endsection
-
-@push('page-js')
-	<!-- Datetimepicker JS -->
-	<script src="{{asset('assets/js/moment.min.js')}}"></script>
-	<script src="{{asset('assets/js/bootstrap-datetimepicker.min.js')}}"></script>
-@endpush
-

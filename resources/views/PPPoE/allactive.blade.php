@@ -1,28 +1,27 @@
-@extends('admin.layouts.header')
+@extends('layouts.admin')
 
 @php
     // if(isset($iid)){$iid;}else{$iid="";}
     $urll = url()->current();
 @endphp
-<x-assets.datatables />
-
-@push('page-css')
-
-@endpush
-
-@push('page-header')
-<div class="col-xs-7 col-auto">
-	<h3 class="page-title">Acive PPPoE Users</h3>
-	<ul class="breadcrumb">
-		<li class="breadcrumb-item"><a href="{{route('dashboard')}}">Dashboard</a></li>
-		<li class="breadcrumb-item active">All Acive Users</li>
-	</ul>
-</div>
-
-@endpush
 
 @section('content')
-<div class="row">
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Active Users</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb breadcrumb-style1 mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">Microtik</li>
+                    <li class="breadcrumb-item active">Active Users</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <div class="row">
     <div class="col-md-12">
       <div class="card bg-primary text-white">
         <div class="card-body">
@@ -71,12 +70,12 @@
 						<thead>
 							<tr style="boder:1px solid black;">
 								<th>Server</th>
-                                <th>Name</th>
-                                <th>Ping</th>
-								                <th>MAC</th>
-                                <th>IP</th>
-                                <th>Uptime</th>
-                                <th>Disconnect</th>
+                  <th>Name</th>
+                  <th>Ping</th>
+                  <th>MAC</th>
+                  <th>IP</th>
+                  <th>Uptime</th>
+                  <th>Disconnect</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -88,12 +87,8 @@
 		</div>
 	</div>
 </div>
-{{-- @endif --}}
-
-{{-- {{ $iid }} --}}
 @endsection
 
-{{-- @if ($iid) --}}
 @push('page-js')
 <script>
     $(document).ready(function() {
@@ -117,5 +112,3 @@
     });
 </script>
 @endpush
-{{-- @endif --}}
-{{-- render : function(data, type, row, meta) {return'<a class="d-inline-block fw-normal w-100 h-100 pe-auto" href="pppoe/ping?ip=' + row.address + '&username=' + row.address + '&server=' + $iid +'">' + row.address + '</a>';}, --}}

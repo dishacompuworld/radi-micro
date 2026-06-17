@@ -170,7 +170,7 @@
 
             @php
                 $prtgRoutes = [
-                    'live.graph', 'history.graph', 'all.sensors', 'ptrg.messsages'
+                    'live.graph.page', 'history.graph', 'all.sensors', 'ptrg.messsages'
                 ];
                 $isPrtgActive = collect($prtgRoutes)->contains(fn($route) => request()->routeIs($route));
             @endphp
@@ -184,8 +184,8 @@
               </a>
 
               <ul class="menu-sub">
-                <li class="menu-item {{ request()->routeIs('live.graph') ? 'active' : '' }}">
-                  <a href="{{ route('live.graph')}}" class="menu-link">
+                <li class="menu-item {{ request()->routeIs('live.graph.page') ? 'active' : '' }}">
+                  <a href="{{ route('live.graph.page')}}" class="menu-link">
                     <div data-i18n="Live Traffice">Live Traffice</div>
                   </a>
                 </li>
