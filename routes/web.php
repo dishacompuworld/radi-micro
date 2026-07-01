@@ -19,6 +19,8 @@ use App\Http\Controllers\LogController;
 use App\Http\Controllers\AlertMessageController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\PrtgApiController;
+use App\Http\Controllers\SendMail;
+use App\Http\Controllers\TaskController;
 
 
 Route::get('/', function () {
@@ -70,6 +72,18 @@ Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
     Route::get('viewCommand', [NewMicrotikController::class, 'viewCommand'])->name('view.command');
     Route::get('traffic-chart/{serverId}/{username}', [NewMicrotikController::class, 'showTrafficChart'])->name('traffic.chart');
     Route::get('ppp-traffic', [NewMicrotikController::class, 'getPppTraffic'])->name('microtik.ppp.traffic');
+    Route::get('showservices', [NewMicrotikController::class, 'showServices'])->name('show.services');
+    Route::post('pptp/update', [NewMicrotikController::class, 'updatePptp'])->name('pptp.update');
+    Route::post('l2tp/update', [NewMicrotikController::class, 'updateL2tp'])->name('l2tp.update');
+    Route::post('telnet/update', [NewMicrotikController::class, 'updateTelnet'])->name('telnet.update');
+    Route::post('wwwssl/update', [NewMicrotikController::class, 'updateWwwssl'])->name('wwwssl.update');
+    Route::post('www/update', [NewMicrotikController::class, 'updateWww'])->name('www.update');
+    Route::post('ssh/update', [NewMicrotikController::class, 'updateSsh'])->name('ssh.update');
+    Route::post('winbox/update', [NewMicrotikController::class, 'updateWinbox'])->name('winbox.update');
+    Route::get('servicestatus', [NewMicrotikController::class, 'showServiceStatus'])->name('service.status');
+    Route::get('systemhistory', [NewMicrotikController::class, 'getSystemHistory'])->name('system.history');
+    Route::get('viewCommand', [NewMicrotikController::class, 'viewCommand'])->name('view.command');
+    Route::post('runCommand', [NewMicrotikController::class, 'runCommand'])->name('run.command');
 
     Route::get('locationdetails',[FetchapiController::class, 'locationdetails'])->name('locationdetails.show');
     Route::get('showsubscriber',[FetchapiController::class, 'subscriberDetails'])->name('subscriber.show');
@@ -154,7 +168,17 @@ Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
     Route::get('pppoe/ping', [PPPoEUserController::class, 'ping'])->name('pppoe.ping');
     Route::get('pppoe/real-time-ping', [PPPoEUserController::class, 'realTimePing']);
 
+    Route::get('sendmail', [SendMail::class, 'sendop'])->name('send.mail');
+
+    Route::get('sendopmail', [SendMail::class, 'sendop'])->name('send.op.mail');
+
     Route::get('settings',[SettingController::class,'index'])->name('settings');
+
+    //TaskController
+    Route::post('/task/enable', [TaskController::class, 'enableTask'])->name('task.enable');
+    Route::post('/task/disable', [TaskController::class, 'disableTask'])->name('task.disable');
+    Route::get('/task/status', [TaskController::class, 'checkTaskStatus'])->name('task.status');
+    Route::post('/task/manage', [TaskController::class, 'manageTask'])->name('task.manage');
 
 });
 

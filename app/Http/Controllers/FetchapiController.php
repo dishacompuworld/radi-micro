@@ -19,12 +19,12 @@ class FetchapiController extends Controller
 {
     public function __construct(){
         // // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
-        // $this->middleware('permission:view-packages',['only' => ['getlocationpackages']]);
-        // // $this->middleware('permission:view-radius-logs',['only' => ['accessrequest']]);
-        // $this->middleware('permission:reset-mac',['only' => ['resetmac']]);
-        // $this->middleware('permission:enable-disable',['only' => ['enablesubscriber','disablesubscriber']]);
-        // $this->middleware('permission:overright-bandwidth',['only' => ['overrightspeed']]);
-        // $this->middleware('permission:view-admin-radius-logs',['only' => ['adminaccesslog']]);
+        $this->middleware('permission:view-packages',['only' => ['getlocationpackages']]);
+        // $this->middleware('permission:view-radius-logs',['only' => ['accessrequest']]);
+        $this->middleware('permission:reset-mac',['only' => ['resetmac']]);
+        $this->middleware('permission:enable-disable',['only' => ['enablesubscriber','disablesubscriber']]);
+        $this->middleware('permission:overright-bandwidth',['only' => ['overrightspeed']]);
+        $this->middleware('permission:view-admin-radius-logs',['only' => ['adminaccesslog']]);
 
         // $this->middleware('permission:view-radius-logs',['only' => ['accessrequest']]);
         // $this->middleware('permission:reset-mac',['only' => ['macreset']]);

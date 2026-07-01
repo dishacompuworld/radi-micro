@@ -21,16 +21,16 @@ class NewMicrotikController extends Controller
     public function __construct()
     {
         // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
-        // $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
-        // $this->middleware('permission:view-script',['only' => ['script']]);
-        // // $this->middleware('permission:view-microtik-logs',['only' => ['viewLogs']);
+        $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
+        $this->middleware('permission:view-script',['only' => ['script']]);
+        // $this->middleware('permission:view-microtik-logs',['only' => ['viewLogs']);
 
-        // $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
-        // $this->middleware('permission:view-script',['only' => ['script']]);
-        // $this->middleware('permission:view-microtik-logs',['only' => ['viewLog']]);
-        // $this->middleware('permission:view-system-health',['only' => ['getSystemHealth']]);
-        // $this->middleware('permission:view-neighbors',['only' => ['getIpNeighbors']]);
-        // $this->middleware('permission:view-services',['only' => ['showServices','showServiceStatus','updatePptp','updateL2tp','updateTelnet','updateWwwssl','updateWww','updateSsh','updateWinbox']]);
+        $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
+        $this->middleware('permission:view-script',['only' => ['script']]);
+        $this->middleware('permission:view-microtik-logs',['only' => ['viewLog']]);
+        $this->middleware('permission:view-system-health',['only' => ['getSystemHealth']]);
+        $this->middleware('permission:view-neighbors',['only' => ['getIpNeighbors']]);
+        $this->middleware('permission:view-services',['only' => ['showServices','showServiceStatus','updatePptp','updateL2tp','updateTelnet','updateWwwssl','updateWww','updateSsh','updateWinbox']]);
         //
     }
 
@@ -352,7 +352,7 @@ class NewMicrotikController extends Controller
 
             if ($API->connect($ip, $user, $password)) {
                 $scripts = $API->comm('/system/script/print');
-                return view('admin.microtik.scripts', compact('title', 'servers', 'scripts', 'seletedserver'));
+                return view('microtik.scripts', compact('title', 'servers', 'scripts', 'seletedserver'));
             }
         }
 
@@ -826,39 +826,42 @@ class NewMicrotikController extends Controller
             "<$rawInterface>",
         ], SORT_STRING));
 
+        $config = (new Config())
+            ->set('host', $ip)
+            ->set('user', $user)
+            ->set('pass', $password)
+            ->set('port', 8728)
+            ->set('timeout', $this->connectionTimeout)
+            ->set('socket_timeout', max(15, $this->connectionTimeout * 2))
+            ->set('ssl', false);
+
+        $client = new Client($config);
+
         try {
             foreach ($attempts as $attempt) {
-                $data = $this->withClient($ip, $user, $password, function (Client $client) use ($attempt) {
-                    $query = (new Query('/interface/monitor-traffic'))
-                        ->equal('interface', $attempt)
-                        ->equal('once');
+                $query = (new Query('/interface/monitor-traffic'))
+                    ->equal('interface', $attempt)
+                    ->equal('once');
 
-                    $responses = $client->query($query)->read();
+                $responses = $client->query($query)->read();
 
-                    if (!empty($responses)) {
-                        $response = is_array($responses[0] ?? null) ? $responses[0] : [];
-                        $rxBytes = (float) ($response['rx-bits-per-second'] ?? 0);
-                        $txBytes = (float) ($response['tx-bits-per-second'] ?? 0);
+                if (!empty($responses)) {
+                    $response = is_array($responses[0] ?? null) ? $responses[0] : [];
+                    $rxBytes = (float) ($response['rx-bits-per-second'] ?? 0);
+                    $txBytes = (float) ($response['tx-bits-per-second'] ?? 0);
 
-                        Log::info('Live traffic response', [
-                            'attempt' => $attempt,
-                            'response' => $response,
-                            'raw_responses' => $responses,
-                        ]);
+                    Log::info('Live traffic response', [
+                        'attempt' => $attempt,
+                        'response' => $response,
+                        'raw_responses' => $responses,
+                    ]);
 
-                        return [
-                            'rx-mbps' => round(($rxBytes / 1000 / 1000), 4),
-                            'tx-mbps' => round(($txBytes / 1000 / 1000), 4),
-                            'rx-bps' => $rxBytes,
-                            'tx-bps' => $txBytes,
-                        ];
-                    }
-
-                    return null;
-                });
-
-                if (!empty($data) && isset($data['rx-mbps'], $data['tx-mbps'])) {
-                    return $data;
+                    return [
+                        'rx-mbps' => round(($rxBytes / 1000 / 1000), 4),
+                        'tx-mbps' => round(($txBytes / 1000 / 1000), 4),
+                        'rx-bps' => $rxBytes,
+                        'tx-bps' => $txBytes,
+                    ];
                 }
             }
 
@@ -869,6 +872,14 @@ class NewMicrotikController extends Controller
                 'interface' => $interface,
             ]);
             return ['error' => 'Socket timeout or router query failed: ' . $e->getMessage()];
+        } finally {
+            if (method_exists($client, 'disconnect')) {
+                try {
+                    $client->disconnect();
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to disconnect RouterOS client: ' . $e->getMessage());
+                }
+            }
         }
     }
 
@@ -1433,7 +1444,7 @@ class RouterosAPI
         return true;
     }
 
-    public function comm(string $com, array $arr = [])
+        public function comm(string $com, array $arr = [])
     {
         if (!$this->client) {
             return [];
@@ -1450,7 +1461,15 @@ class RouterosAPI
             }
         }
 
-        return $q->read();
+        try {
+            return $q->read();
+        } catch (\RouterOS\Exceptions\StreamException $e) {
+            Log::error('RouterOS StreamException in comm: ' . $e->getMessage());
+            return [];
+        } catch (\Throwable $e) {
+            Log::error('RouterOS Exception in comm: ' . $e->getMessage());
+            return [];
+        }
     }
 
     public function write(string $command, $param2 = true)
@@ -1484,7 +1503,15 @@ class RouterosAPI
             }
         }
 
-        $result = $q->read();
+        try {
+            $result = $q->read();
+        } catch (\RouterOS\Exceptions\StreamException $e) {
+            Log::error('RouterOS StreamException in read: ' . $e->getMessage());
+            $result = [];
+        } catch (\Throwable $e) {
+            Log::error('RouterOS Exception in read: ' . $e->getMessage());
+            $result = [];
+        }
 
         // reset
         $this->lastCommand = null;
@@ -1492,6 +1519,7 @@ class RouterosAPI
 
         return $result;
     }
+
 
     public function parseResponse($response)
     {

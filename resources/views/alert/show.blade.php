@@ -1,14 +1,23 @@
-// resources/views/alert-messages/show.blade.php
-
-@extends('admin.layouts.header')
-
-@push('page-css')
-
-@endpush
-
-@push('page-header')
+@extends('layouts.admin')
 
 @section('content')
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Show Alert Message</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb breadcrumb-style1 mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">Alert Messages</li>
+                    <li class="breadcrumb-item active">Show Alert Message</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-8">
@@ -66,4 +75,5 @@
             </div>
         </div>
     </div>
+</div>
 @endsection

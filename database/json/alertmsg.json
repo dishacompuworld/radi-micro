@@ -1,0 +1,39 @@
+
+[
+    {
+        "type" : "success",
+        "message" : "Optical power updated for :ontname having :power dBm with User :username",
+        "category" : "",
+        "msgcode" : "op.refresh.success"
+    },
+    {
+        "type" : "error",
+        "message" : "Error while deleting :oid Try after sometime..",
+        "category" : "",
+        "msgcode" : "ont.delete.error"
+    },
+    {
+        "type" : "error",
+        "message" : "Optical power not updated, Service not available.  Try after some time.",
+        "category" : "",
+        "msgcode" : "ont.refresh.fail"
+    },
+    {
+        "type" : "success",
+        "message" : "ONT having OID :oid deleted succefully...",
+        "category" : "",
+        "msgcode" : "ont.delete.success"
+    },
+    {
+        "type" : "error",
+        "message" : "ONT having OID :oid reboot failed., Try after sometime...",
+        "category" : "",
+        "msgcode" : "ont.reboot.error"
+    },
+    {
+        "type" : "success",
+        "message" : "ONT having OID :oid rebooted successfully...",
+        "category" : "",
+        "msgcode" : "ont.reboot.success"
+    }
+]

@@ -48,13 +48,13 @@ class FetchSNMP extends Controller
         $this->minOntPower = env('MIN_ONT_POWER');
         
         // Set up middleware permissions
-        // $this->middleware('permission:fetch-op-power',['only' => ['insertintodb']]);
-        // $this->middleware('permission:show-op-power',['only' => ['showop']]);
-        // $this->middleware('permission:assign-optical-power',['only' => ['assignpower']]);
-        // $this->middleware('permission:add-ont',['only' => ['addont']]);
-        // $this->middleware('permission:register-ont',['only' => ['registont','deregistont']]);
-        // $this->middleware('permission:rename-ont',['only' => ['renameont']]);
-        // $this->middleware('permission:delete-ont',['only' => ['deleteont']]);
+        $this->middleware('permission:fetch-op-power',['only' => ['insertintodb']]);
+        $this->middleware('permission:show-op-power',['only' => ['showop']]);
+        $this->middleware('permission:assign-optical-power',['only' => ['assignpower']]);
+        $this->middleware('permission:add-ont',['only' => ['addont']]);
+        $this->middleware('permission:register-ont',['only' => ['registont','deregistont']]);
+        $this->middleware('permission:rename-ont',['only' => ['renameont']]);
+        $this->middleware('permission:delete-ont',['only' => ['deleteont']]);
     }
     
     /**
@@ -659,9 +659,10 @@ class FetchSNMP extends Controller
                     return $status;
                     })
                     ->addColumn('action',function ($data){
-                            $refreshbtn = ' <a href="javascript:void(0)" class="btn btn-primary" data-route="'.route('update.ont.power').'" data-variable="'. $data->oid .'" data-ont="'. $data->name .'" data-user= "'. $data->username .'" id="refreshbtn" ><i class="bi bi-arrow-repeat"></i></a>';
-                            $deletebtn = ' <a href="javascript:void(0)" class="btn btn-danger" data-routee="'.route('delete.ont').'" data-oid="'. $data->oid .'" data-ont="'. $data->name .'" data-user= "'. $data->username .'" id="deletebtn"><i class="fas fa-trash"></i></a>';
-                            $rebootbtn = ' <a href="javascript:void(0)" class="btn btn-danger" data-routee="'.route('reboot.ont').'" data-oid="'. $data->oid .'" data-ont="'. $data->name .'" data-user= "'. $data->username .'" id="rebootbtn"><i class="bi bi-power"></i></a>';
+                            $refreshbtn = ' <a href="javascript:void(0)" class="btn btn-primary btn-sm d-inline-flex align-items-center" data-route="'.route('update.ont.power').'" data-variable="'. $data->oid .'" data-ont="'. $data->name .'" data-user= "'. $data->username .'" id="refreshbtn" ><i class="bx bx-refresh bx-xs"></i></a>';
+                            $deletebtn = ' <a href="javascript:void(0)" class="btn btn-danger btn-sm d-inline-flex align-items-center" data-routee="'.route('delete.ont').'" data-oid="'. $data->oid .'" data-ont="'. $data->name .'" data-user= "'. $data->username .'" id="deletebtn"><i class="bx bx-trash bx-xs"></i></a>';
+                            $rebootbtn = ' <a href="javascript:void(0)" class="btn btn-danger btn-sm d-inline-flex align-items-center" data-routee="'.route('reboot.ont').'" data-oid="'. $data->oid .'" data-ont="'. $data->name .'" data-user= "'. $data->username .'" id="rebootbtn"><i class="bx bx-revision bx-xs"></i></a>';
+
                             
                             // The middleware handling permission 'delete-ont' will prevent access at the route level
                             // No need to check permissions again here

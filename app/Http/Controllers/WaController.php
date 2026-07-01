@@ -20,7 +20,7 @@ class WaController extends Controller
      */
     public function __construct()
     {
-        // $this->middleware('permission:send-whatsapp', ['only' => ['sendtext', 'sendImage']]);
+        $this->middleware('permission:send-whatsapp', ['only' => ['sendtext', 'sendImage']]);
         
         // Load WhatsApp API configuration
         $this->apiUrl = env('WHATS_APP_URL', null);

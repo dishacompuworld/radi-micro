@@ -13,7 +13,7 @@ class PackageController extends Controller
     public function __construct()
     {
         // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
-        // $this->middleware('permission:view-packages',['only' => ['show','insertdelete']]);
+        $this->middleware('permission:view-packages',['only' => ['show','insertdelete']]);
 
     }
 

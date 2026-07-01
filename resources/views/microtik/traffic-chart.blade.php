@@ -71,6 +71,16 @@
     };
     let updateInterval;
 
+    function stopTrafficPolling() {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
+    }
+
+    window.addEventListener('beforeunload', stopTrafficPolling);
+    window.addEventListener('pagehide', stopTrafficPolling);
+
     function fetchTrafficData() {
         const serverId = '{{ $serverId }}';
         const username = '{{ $username }}';

@@ -14,8 +14,8 @@ class LogController extends Controller
     public function __construct()
      {
         //  // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
-        //  $this->middleware('permission:all-logs',['only' => ['show']]);
-        //  $this->middleware('permission:delete-all-logs',['only' => ['delete']]);
+         $this->middleware('permission:all-logs',['only' => ['show']]);
+         $this->middleware('permission:delete-all-logs',['only' => ['delete']]);
      }
 
 

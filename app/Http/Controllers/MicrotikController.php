@@ -19,16 +19,16 @@ class MicrotikController extends Controller
     public function __construct()
     {
         // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
-        // $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
-        // $this->middleware('permission:view-script',['only' => ['script']]);
-        // // $this->middleware('permission:view-microtik-logs',['only' => ['viewLogs']);
+        $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
+        $this->middleware('permission:view-script',['only' => ['script']]);
+        // $this->middleware('permission:view-microtik-logs',['only' => ['viewLogs']);
 
-        // $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
-        // $this->middleware('permission:view-script',['only' => ['script']]);
-        // $this->middleware('permission:view-microtik-logs',['only' => ['viewLog']]);
-        // $this->middleware('permission:view-system-health',['only' => ['getSystemHealth']]);
-        // $this->middleware('permission:view-neighbors',['only' => ['getIpNeighbors']]);
-        // $this->middleware('permission:view-services',['only' => ['showServices','showServiceStatus','updatePptp','updateL2tp','updateTelnet','updateWwwssl','updateWww','updateSsh','updateWinbox']]);
+        $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
+        $this->middleware('permission:view-script',['only' => ['script']]);
+        $this->middleware('permission:view-microtik-logs',['only' => ['viewLog']]);
+        $this->middleware('permission:view-system-health',['only' => ['getSystemHealth']]);
+        $this->middleware('permission:view-neighbors',['only' => ['getIpNeighbors']]);
+        $this->middleware('permission:view-services',['only' => ['showServices','showServiceStatus','updatePptp','updateL2tp','updateTelnet','updateWwwssl','updateWww','updateSsh','updateWinbox']]);
         //
     }
 

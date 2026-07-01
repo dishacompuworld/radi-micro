@@ -19,7 +19,7 @@ class PPPoEController extends Controller
     public function __construct()
     {
         // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
-        // $this->middleware('permission:view-server',['only' => ['deleted','newactiveserver','ping','allactivenew', 'delet']]);
+        $this->middleware('permission:view-server',['only' => ['deleted','newactiveserver','ping','allactivenew', 'delet']]);
         $this->api = new RouterosAPI();
         $this->api->debug = false;
     }

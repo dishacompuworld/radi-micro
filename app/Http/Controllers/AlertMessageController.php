@@ -16,10 +16,10 @@ class AlertMessageController extends Controller
      */
     public function __construct()
     {
-        // $this->middleware('permission:show-alerts', ['only' => ['index', 'show']]);
-        // $this->middleware('permission:add-alerts', ['only' => ['create', 'store']]);
-        // $this->middleware('permission:edit-alerts', ['only' => ['edit', 'update']]);
-        // $this->middleware('permission:delete-alerts', ['only' => ['destroy']]);
+        $this->middleware('permission:show-alerts', ['only' => ['index', 'show']]);
+        $this->middleware('permission:add-alerts', ['only' => ['create', 'store']]);
+        $this->middleware('permission:edit-alerts', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:delete-alerts', ['only' => ['destroy']]);
     }
     
     /**
@@ -41,9 +41,9 @@ class AlertMessageController extends Controller
                 return DataTables::of($alertMessages)
                     ->addIndexColumn()
                     ->addColumn('action', function ($data) {
-                        $showbtn = ' <a href="'.route('alert.show', $data->id).'" class="btn btn-primary">Show</a>';
-                        $editbtn = ' <a href="'.route('alert.edit', $data->id).'" class="btn btn-secondary">Edit</a>';
-                        $deletebtn = ' <a href="javascript:void(0)" class="btn btn-danger" data-id="'.$data->id.'" id="delete-btn">Delete</a>';
+                        $showbtn = ' <a href="'.route('alert.show', $data->id).'" class="btn btn-primary btn-sm">Show</a>';
+                        $editbtn = ' <a href="'.route('alert.edit', $data->id).'" class="btn btn-secondary btn-sm">Edit</a>';
+                        $deletebtn = ' <a href="javascript:void(0)" class="btn btn-danger btn-sm" data-id="'.$data->id.'" id="delete-btn">Delete</a>';
                         
                         // Provide all buttons - permissions are handled at the route level by middleware
                         return $showbtn.' '.$editbtn.' '.$deletebtn;

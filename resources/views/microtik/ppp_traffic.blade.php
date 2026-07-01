@@ -89,6 +89,16 @@
     };
     let updateInterval;
 
+    function stopLiveTrafficPolling() {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
+    }
+
+    window.addEventListener('beforeunload', stopLiveTrafficPolling);
+    window.addEventListener('pagehide', stopLiveTrafficPolling);
+
     function fetchPppTraffic() {
         const serverId = document.getElementById('server-select').value;
         if (!serverId) {
@@ -216,7 +226,7 @@
     }
 
     function stopLiveTraffic() {
-        clearInterval(updateInterval);
+        stopLiveTrafficPolling();
         fetchPppTraffic();
     }
 
