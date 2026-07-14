@@ -144,19 +144,21 @@ class UserController extends Controller
         $locations = Location::get();
 
         $slocations = DB::table('userlocation')
-        ->where('userid', $user->id)
-        ->get();
+            ->where('userid', $user->id)
+            ->get();
 
-        $srole=DB::table('model_has_roles')
-        ->where('model_id', $user->id)
-        ->get();
+        $srole = DB::table('model_has_roles')
+            ->where('model_id', $user->id)
+            ->first();
 
-        // return $srole[0]->role_id;
-        $srolename=DB::table('roles')
-        ->where('id', $srole[0]->role_id)
-        ->get();
+        $srolename = collect();
+        if ($srole) {
+            $srolename = DB::table('roles')
+                ->where('id', $srole->role_id)
+                ->get();
+        }
 
-        // return $srolename;
+        // return $user;
 
         return view('users.edit',compact(
             'title','roles','user','locations','slocations','srolename'

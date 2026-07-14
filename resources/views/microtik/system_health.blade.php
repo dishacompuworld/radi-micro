@@ -77,21 +77,33 @@
                     return;
                 }
 
-                let rows = '';
-                data.forEach(item => {
-                    Object.entries(item).forEach(([key, value]) => {
-                        rows += `
-                            <tr>
-                                <th class="text-nowrap" style="width: 260px;">${key}</th>
-                                <td>${value ?? ''}</td>
-                            </tr>
-                        `;
-                    });
-                });
+                const fields = ['.id', 'name', 'value', 'type'];
+                const headers = ['ID', 'Name', 'Value', 'Unit'];
+
+                const rows = data.map(item => {
+                    const id = item['.id'] ?? item.id ?? '';
+                    const name = item.name ?? item['name'] ?? '';
+                    const value = item.value ?? item['value'] ?? '';
+                    const type = item.type ?? item['type'] ?? '';
+
+                    return `
+                        <tr>
+                            <td>${id}</td>
+                            <td>${name}</td>
+                            <td>${value}</td>
+                            <td>${type}</td>
+                        </tr>
+                    `;
+                }).join('');
 
                 container.innerHTML = `
                     <div class="table-responsive">
-                        <table class="table table-borderless mb-0">
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    ${headers.map(header => `<th>${header}</th>`).join('')}
+                                </tr>
+                            </thead>
                             <tbody>
                                 ${rows}
                             </tbody>

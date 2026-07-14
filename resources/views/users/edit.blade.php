@@ -26,11 +26,20 @@
             <h5 class="card-title mb-0">Edit User</h5>
         </div>
         <div class="card-body">
-            <form method="POST" enctype="multipart/form-data" action="{{ route('users.update', $user->id) }}">
-                @csrf
-                @method('PUT')
+            @if(config('app.debug'))
+                <div class="mb-3">
+                    <strong>DEBUG:</strong>
+                    <pre style="background:#f8f9fa;padding:8px;border:1px solid #ddd;">User: {{ json_encode($user) }}
+Slocations: {{ json_encode($slocations ?? []) }}
+Srolename: {{ json_encode($srolename ?? []) }}</pre>
+                </div>
+            @endif
+            {{-- @if (isset($user) && isset($user->id)) --}}
+                <form method="POST" enctype="multipart/form-data" action="{{ url('users/'.$user->id) }}">
+                    @csrf
+                    @method('PUT')
 
-                <div class="row g-3">
+                    <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label" for="name">Full Name</label>
                         <input
@@ -38,7 +47,7 @@
                             id="name"
                             name="name"
                             class="form-control @error('name') is-invalid @enderror"
-                            value="{{$user->name}}"
+                            value="{{ old('name', $user->name ?? '') }}"
                             placeholder="Full Name"
                         >
                         @error('name')
@@ -53,7 +62,7 @@
                             id="email"
                             name="email"
                             class="form-control @error('email') is-invalid @enderror"
-                            value="{{ old('email', $user->email) }}"
+                            value="{{ old('email', $user->email ?? '') }}"
                             placeholder="example@gmail.com"
                         >
                         @error('email')
@@ -63,10 +72,20 @@
 
                     <div class="col-12">
                         <label class="form-label" for="role">Role</label>
+                        @php
+                            $selectedRole = old('role');
+                            if (empty($selectedRole) && isset($user)) {
+                                if (!empty($srolename) && isset($srolename[0]->name)) {
+                                    $selectedRole = $srolename[0]->name;
+                                } elseif (method_exists($user, 'getRoleNames')) {
+                                    $selectedRole = $user->getRoleNames()->first() ?: null;
+                                }
+                            }
+                        @endphp
                         <select id="role" class="select2 form-select @error('role') is-invalid @enderror" name="role">
                             <option value="">Select Role</option>
                             @foreach ($roles as $role)
-                                <option value="{{ $role->name }}" @selected(old('role') == $role->name || $user->hasRole($role->name))>
+                                <option value="{{ $role->name }}" @selected((string)($selectedRole ?? '') === (string)$role->name)>
                                     {{ $role->name }}
                                 </option>
                             @endforeach
@@ -79,7 +98,10 @@
                     <div class="col-12">
                         <label class="form-label" for="location">Select Locations <span class="text-muted">(Optional)</span></label>
                         @php
-                            $selectedLocationIds = old('location', collect($slocations ?? [])->pluck('locationid')->toArray());
+                            $selectedLocationIds = old('location');
+                            if (empty($selectedLocationIds)) {
+                                $selectedLocationIds = collect($slocations ?? [])->pluck('locationid')->map(function($v){ return (int) $v; })->toArray();
+                            }
                         @endphp
                         <select
                             id="location"
@@ -139,6 +161,9 @@
                     </div>
                 </div>
             </form>
+            {{-- @else
+                <div class="alert alert-danger mb-0">User data is missing. Please return to the users list and try again.</div>
+            @endif --}}
         </div>
     </div>
 </div>

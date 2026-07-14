@@ -34,55 +34,59 @@
     </div>
 
     <div class="row">
-    <div class="col-sm-12">
-      <div class="card">
-        <div class="card-body col-sm-3">
-            <div class="form-group">
-		        <form class="forms-sample" action="{{ route('find.mac.vendor')}}" method="get">
-                    <div class="input-group input-group-sm mb-3">
-                        <div class="input-group-prepend">
+        <div class="col-sm-12 col-md-6 col-lg-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form action="{{ route('find.mac.vendor') }}" method="get">
+                        <div class="input-group input-group-sm mb-3">
                             <span class="input-group-text" id="basic-addon1">Search MAC</span>
-                          </div>
-						<input type="search" class="form-control" placeholder="XX-XX-XX-XX-XX-XX" aria-label="XX-XX-XX-XX-XX-XX" aria-describedby="inputGroup-sizing-sm" name="mac" value="{{ $mac }}">
-						<div class="input-group-append">
-							<button class="btn btn-outline-secondary" type="submit">GO</button>
-						</div>
-					  </div>
-                </form>
+                            <input type="search" class="form-control" placeholder="XX-XX-XX-XX-XX-XX" aria-label="MAC address" aria-describedby="basic-addon1" name="mac" value="{{ $mac }}">
+                            <button class="btn btn-outline-secondary" type="submit">GO</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
+    </div>
+
+    @if (!empty($data))
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <table class="table table-striped table-bordered mb-0">
+                        <tbody>
+                            <tr>
+                                <th scope="row">Organization Name</th>
+                                <td>{{ $data->organization_name }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Organization Address</th>
+                                <td>{{ $data->organization_address }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <a href="javascript:history.back()" class="btn btn-primary btn-sm">Back</a>
         </div>
     </div>
-</div>
-@if ($data)
-<div class="row">
-    <div class="col-sm-12">
-      <div class="card shadow p-3 mb-5 bg-body rounded">
-        <div class="card-body">
-            <table  class="table-striped">
-                <tr><th>Organization Name</th><td>{{ $data->organization_name }}</td></tr>
-                <tr><th>Organization Address</th><td>{{ $data->organization_address }}</td></tr>
-            </table>
+    @endif
+
+    @if (!empty($error))
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <div class="alert alert-warning mb-0" role="alert">
+                        MAC details not available.
+                    </div>
+                </div>
+            </div>
+            <a href="javascript:history.back()" class="btn btn-primary btn-sm">Back</a>
         </div>
-      </div>
-      <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
     </div>
-</div>
-  @endif
-  @if ($error)
-  <div class="row">
-      <div class="col-sm-12">
-        <div class="card">
-          <div class="card-body">
-              <table  class="table-striped">
-                  <tr><th>Not Available</th></tr>
-              </table>
-          </div>
-        </div>
-        <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
-      </div>
-  </div>
-  @endif
+    @endif
 </div>
 @endsection
 
