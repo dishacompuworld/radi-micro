@@ -26,7 +26,7 @@ class VersionInformation
     public function latest(): array
     {
         try {
-            $cached = Cache::get('latest-upstream-versions-v2');
+            $cached = Cache::get('latest-upstream-versions-v3');
 
             if (is_array($cached)) {
                 return $cached;
@@ -35,7 +35,7 @@ class VersionInformation
             $versions = $this->fetchLatest();
 
             if (!in_array('Unavailable', $versions, true)) {
-                Cache::put('latest-upstream-versions-v2', $versions, now()->addDay());
+                Cache::put('latest-upstream-versions-v3', $versions, now()->addDay());
             }
 
             return $versions;
@@ -49,7 +49,7 @@ class VersionInformation
     {
         return [
             'laravel' => $this->safely(fn () => $this->latestLaravel()),
-            'mysql' => $this->safely(fn () => $this->latestMySqlLts()),
+            'mysql' => $this->safely(fn () => $this->latestMySql()),
             'php' => $this->safely(fn () => $this->latestPhp()),
         ];
     }
@@ -61,11 +61,11 @@ class VersionInformation
         return $release['tag_name'] ?? throw new RuntimeException('Laravel version was not returned.');
     }
 
-    private function latestMySqlLts(): string
+    private function latestMySql(): string
     {
-        $releaseNotes = $this->get('https://dev.mysql.com/doc/relnotes/mysql/8.4/en/');
+        $downloadsPage = $this->get('https://dev.mysql.com/downloads/mysql/');
 
-        preg_match('/Changes in MySQL (8\\.4\\.\\d+) \\([0-9-]+\\)/', $releaseNotes, $matches);
+        preg_match('/MySQL Community Server\\s*([0-9]+(?:\\.[0-9]+){1,2})/i', $downloadsPage, $matches);
 
         return $matches[1] ?? 'Unavailable';
     }

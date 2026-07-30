@@ -74,12 +74,6 @@
         <!-- Main JS -->
         <script src="{{ asset('assets/js/main.js') }}"></script>
 
-        <!-- jQuery (Required for DataTables) -->
-        <script src="https://jquery.com"></script>
-
-        <!-- DataTables Core -->
-        <script src="https://datatables.net"></script>
-
         <!-- Page JS -->
         <script src="{{ asset('assets/js/dashboards-analytics.js') }}"></script>
 

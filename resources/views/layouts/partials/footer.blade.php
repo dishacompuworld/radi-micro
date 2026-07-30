@@ -39,7 +39,7 @@
         Latest:
         <span @class(['text-success fw-semibold' => $versionInformation->isUpgradeAvailable($usedVersions['laravel'], $latestVersions['laravel'])])>Laravel {{ $latestVersions['laravel'] }}</span>
         &middot;
-        <span @class(['text-success fw-semibold' => $versionInformation->isUpgradeAvailable($usedVersions['mysql'], $latestVersions['mysql'])])>MySQL LTS {{ $latestVersions['mysql'] }}</span>
+        <span @class(['text-success fw-semibold' => $versionInformation->isUpgradeAvailable($usedVersions['mysql'], $latestVersions['mysql'])])>MySQL {{ $latestVersions['mysql'] }}</span>
         &middot;
         <span @class(['text-success fw-semibold' => $versionInformation->isUpgradeAvailable($usedVersions['php'], $latestVersions['php'])])>PHP {{ $latestVersions['php'] }}</span>
       </span>

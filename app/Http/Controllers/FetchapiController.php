@@ -1129,7 +1129,7 @@ class FetchapiController extends Controller
                 'Version' => 'HTTP/1.0',
                 'Accept' => 'application/json',
                 'Authentication' => $tokan
-            ])->post('admin.xceednet.com/operator_subscribers/search',['search'=>['value'=>$name],'start'=> '0', 'length'=> '99']);
+            ])->post('https://admin.xceednet.com/operator_subscribers/search',['search'=>['value'=>$name],'start'=> '0', 'length'=> '99']);
 
             // $daata = $response['data'];
 
@@ -1195,7 +1195,7 @@ class FetchapiController extends Controller
             'Version' => 'HTTP/1.0',
             'Accept' => 'application/json',
             'Authentication' => $token
-        ])->post('admin.xceednet.com/operator_subscribers/search', ['search' => ['value' => $name], 'start' => '0', 'length' => '99']);
+        ])->post('https://admin.xceednet.com/operator_subscribers/search', ['search' => ['value' => $name], 'start' => '0', 'length' => '99']);
 
 
         $cleanData = [];

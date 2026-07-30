@@ -137,31 +137,27 @@ class UserController extends Controller
      * @param  \app\Models\User $user
      * @return \Illuminate\Http\Response
      */
-    public function edit(User $user)
+    public function edit(?User $user = null)
     {
         $title = "edit user";
         $roles = Role::get();
         $locations = Location::get();
+        $user = $user?->fresh() ?? auth()->user()?->fresh();
 
-        $slocations = DB::table('userlocation')
-            ->where('userid', $user->id)
-            ->get();
-
-        $srole = DB::table('model_has_roles')
-            ->where('model_id', $user->id)
-            ->first();
-
-        $srolename = collect();
-        if ($srole) {
-            $srolename = DB::table('roles')
-                ->where('id', $srole->role_id)
-                ->get();
+        if (! $user) {
+            abort(404);
         }
 
-        // return $user;
+        $selectedLocationIds = DB::table('userlocation')
+            ->where('userid', $user->id)
+            ->pluck('locationid')
+            ->map(fn ($id) => (string) $id)
+            ->all();
 
-        return view('users.edit',compact(
-            'title','roles','user','locations','slocations','srolename'
+        $selectedRole = $user->getRoleNames()->first() ?? '';
+
+        return view('users.edit', compact(
+            'title', 'roles', 'user', 'locations', 'selectedRole', 'selectedLocationIds'
         ));
     }
 

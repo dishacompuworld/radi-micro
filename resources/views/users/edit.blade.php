@@ -26,18 +26,16 @@
             <h5 class="card-title mb-0">Edit User</h5>
         </div>
         <div class="card-body">
-            @if(config('app.debug'))
-                <div class="mb-3">
-                    <strong>DEBUG:</strong>
-                    <pre style="background:#f8f9fa;padding:8px;border:1px solid #ddd;">User: {{ json_encode($user) }}
-Slocations: {{ json_encode($slocations ?? []) }}
-Srolename: {{ json_encode($srolename ?? []) }}</pre>
-                </div>
-            @endif
-            {{-- @if (isset($user) && isset($user->id)) --}}
-                <form method="POST" enctype="multipart/form-data" action="{{ url('users/'.$user->id) }}">
-                    @csrf
-                    @method('PUT')
+            @php
+                $viewUser = $user ?? auth()->user();
+                $selectedRole = old('role', $selectedRole ?? ($viewUser?->getRoleNames()->first() ?? ''));
+                $selectedLocationIds = old('location', $selectedLocationIds ?? []);
+                $selectedLocationIds = collect($selectedLocationIds)->map(fn ($id) => (string) $id)->all();
+            @endphp
+
+            <form method="POST" enctype="multipart/form-data" action="{{ route('users.update', $user->id) }}">
+                @csrf
+                @method('PUT')
 
                     <div class="row g-3">
                     <div class="col-12">
@@ -47,7 +45,7 @@ Srolename: {{ json_encode($srolename ?? []) }}</pre>
                             id="name"
                             name="name"
                             class="form-control @error('name') is-invalid @enderror"
-                            value="{{ old('name', $user->name ?? '') }}"
+                            value="{{ old('name', data_get($viewUser, 'name', '')) }}"
                             placeholder="Full Name"
                         >
                         @error('name')
@@ -62,7 +60,7 @@ Srolename: {{ json_encode($srolename ?? []) }}</pre>
                             id="email"
                             name="email"
                             class="form-control @error('email') is-invalid @enderror"
-                            value="{{ old('email', $user->email ?? '') }}"
+                            value="{{ old('email', data_get($viewUser, 'email', '')) }}"
                             placeholder="example@gmail.com"
                         >
                         @error('email')
@@ -72,16 +70,6 @@ Srolename: {{ json_encode($srolename ?? []) }}</pre>
 
                     <div class="col-12">
                         <label class="form-label" for="role">Role</label>
-                        @php
-                            $selectedRole = old('role');
-                            if (empty($selectedRole) && isset($user)) {
-                                if (!empty($srolename) && isset($srolename[0]->name)) {
-                                    $selectedRole = $srolename[0]->name;
-                                } elseif (method_exists($user, 'getRoleNames')) {
-                                    $selectedRole = $user->getRoleNames()->first() ?: null;
-                                }
-                            }
-                        @endphp
                         <select id="role" class="select2 form-select @error('role') is-invalid @enderror" name="role">
                             <option value="">Select Role</option>
                             @foreach ($roles as $role)
@@ -97,12 +85,6 @@ Srolename: {{ json_encode($srolename ?? []) }}</pre>
 
                     <div class="col-12">
                         <label class="form-label" for="location">Select Locations <span class="text-muted">(Optional)</span></label>
-                        @php
-                            $selectedLocationIds = old('location');
-                            if (empty($selectedLocationIds)) {
-                                $selectedLocationIds = collect($slocations ?? [])->pluck('locationid')->map(function($v){ return (int) $v; })->toArray();
-                            }
-                        @endphp
                         <select
                             id="location"
                             class="select2 form-select @error('location') is-invalid @enderror"
@@ -110,7 +92,7 @@ Srolename: {{ json_encode($srolename ?? []) }}</pre>
                             multiple
                         >
                             @foreach ($locations as $loc)
-                                <option value="{{ $loc->id }}" @selected(in_array($loc->id, $selectedLocationIds))>
+                                <option value="{{ $loc->id }}" @selected(in_array((string) $loc->id, $selectedLocationIds, true))>
                                     {{ $loc->name }}
                                 </option>
                             @endforeach
@@ -141,6 +123,7 @@ Srolename: {{ json_encode($srolename ?? []) }}</pre>
                             name="password"
                             class="form-control @error('password') is-invalid @enderror"
                         >
+                        <small class="text-muted">Leave blank to keep the current password.</small>
                         @error('password')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -159,11 +142,21 @@ Srolename: {{ json_encode($srolename ?? []) }}</pre>
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const passwordField = document.getElementById('password');
+                            const confirmationField = document.getElementById('password_confirmation');
+
+                            if (passwordField && confirmationField) {
+                                passwordField.addEventListener('input', function () {
+                                    confirmationField.value = this.value;
+                                });
+                            }
+                        });
+                    </script>
                 </div>
             </form>
-            {{-- @else
-                <div class="alert alert-danger mb-0">User data is missing. Please return to the users list and try again.</div>
-            @endif --}}
         </div>
     </div>
 </div>
