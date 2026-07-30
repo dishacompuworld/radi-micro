@@ -231,7 +231,7 @@ class PrtgApiController extends Controller
         //  return $sdnew1 . ' ' . $ednew1;
 
 
-        $response = Http::get($prtg_link.'/chart.svg?id='. $graph_id . '&avg=10&sdate=' . $sdnew1 . '&edate=' . $ednew1 . '&width=700&height=300&graphid=-1&graphstyling=showLegend%3D%270%27+baseFontSize%3D%276%27&hide=-4&apitoken='. $prtg_apikey);
+        $response = Http::get($prtg_link.'/chart.svg?id='. $graph_id . '&avg=30&sdate=' . $sdnew1 . '&edate=' . $ednew1 . '&width=700&height=300&graphid=-1&graphstyling=showLegend%3D%270%27+baseFontSize%3D%276%27&hide=-4&apitoken='. $prtg_apikey);
         // return $response;
         file_put_contents("hgraph.svg", $response);
 
