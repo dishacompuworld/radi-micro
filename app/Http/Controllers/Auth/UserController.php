@@ -170,49 +170,59 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $this->validate($request,[
-            'name'=>'required|max:100',
-            'email'=>'required|email',
-            'role'=>'required',
-            'password'=>'nullable|confirmed|max:200',
-            'avatar'=>'nullable|file|image|mimes:jpg,jpeg,gif,png',
-            'location'=>'nullable|array',
+        $isSuperAdmin = auth()->user()?->hasRole('super-admin') ?? false;
+
+        $this->validate($request, [
+            'name' => 'required|max:100',
+            'email' => $isSuperAdmin ? 'required|email' : 'nullable|email',
+            'role' => $isSuperAdmin ? 'required' : 'nullable',
+            'password' => 'nullable|confirmed|max:200',
+            'avatar' => 'nullable|file|image|mimes:jpg,jpeg,gif,png',
+            'location' => 'nullable|array',
         ]);
 
         $locations = $request->location;
         $data = [];
         $imageName = $user->avatar;
         $password = $user->password;
-        if($request->hasFile('avatar')){
+        $email = $request->filled('email') ? $request->email : $user->email;
+        $roleName = $request->filled('role') ? $request->role : $user->getRoleNames()->first();
+
+        if ($request->hasFile('avatar')) {
             $imageName = time().'.'.$request->avatar->extension();
             $request->avatar->move(public_path('storage/users'), $imageName);
         }
-        if(!empty($request->password) && ($user->password != $request->password)){
+        if (!empty($request->password) && ($user->password != $request->password)) {
             $password = Hash::make($request->password);
         }
         $user->update([
             'name' => $request->name,
             'username' => $request->username,
-            'email' => $request->email,
+            'email' => $email,
             'avatar' => $imageName,
             'password' => $password,
         ]);
-        foreach($user->getRoleNames() as $userRole){
-            $user->removeRole($userRole);
-        }
-        $user->assignRole($request->role);
 
-        DB::table('userlocation')
+        if ($isSuperAdmin) {
+            foreach ($user->getRoleNames() as $userRole) {
+                $user->removeRole($userRole);
+            }
+            $user->assignRole($roleName);
+        }
+
+        if ($isSuperAdmin || $request->has('location')) {
+            DB::table('userlocation')
                 ->where('userid', $user->id)
                 ->delete();
 
-        foreach ($locations ?? [] as $value) {
-            $data = [
-                'locationid' => $value,
-                'userid' => $user->id,
-            ];
-            DB::table('userlocation')
-            ->insert($data);
+            foreach ($locations ?? [] as $value) {
+                $data = [
+                    'locationid' => $value,
+                    'userid' => $user->id,
+                ];
+                DB::table('userlocation')
+                    ->insert($data);
+            }
         }
 
         // $notification = notify('user updated successfully');

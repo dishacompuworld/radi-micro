@@ -12,7 +12,7 @@
 
             <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
               <!-- Search -->
-              <div class="navbar-nav align-items-center">
+              <div class="navbar-nav align-items-center me-auto">
                 <div class="nav-item d-flex align-items-center">
                   <i class="bx bx-search fs-4 lh-0"></i>
                   <li class="nav-item dropdown">
@@ -46,7 +46,132 @@
               </div>
               <!-- /Search -->
 
-              <ul class="navbar-nav flex-row align-items-center ms-auto">
+              <!-- mseb container -->
+              <ul class="nav user-menu me-2">
+                <li class="nav-item">
+                  <div class="temp-container {{ $bgClass ?? '' }}" id="temp-container">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="text-white-50">Main Server Temp.&nbsp;</span>
+                      <span class="text-white mb-0 fw-bold" id="temp-text">{{ '0°C'}}</span>
+                    </div>
+                  </div>
+                  <script>
+                            // This script is placed directly after the mseb-container element
+                            // so the elements are guaranteed to be available when the script runs.
+                            const tempInfoContainer = document.getElementById('temp-container');
+                            const tempStatusTextElement = document.getElementById('temp-text');
+
+                            function updateTempInfoDisplay() {
+                                // Check if elements exist before attempting to update them.
+                                // This is a safeguard, though they should always be present in the header.
+                                if (!tempInfoContainer || !tempStatusTextElement) {
+                                    console.error('MSEB info elements not found in header. Clearing update interval.');
+                                    // Clear the interval if elements are unexpectedly missing
+                                    clearInterval(window.tempUpdateInterval);
+                                    return;
+                                }
+
+                                fetch("{{ route('admin.dashboard.temp') }}")
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            throw new Error(`HTTP error! status: ${response.status}`);
+                                        }
+                                        return response.json();
+                                    })
+                                    .then(data => {
+                                        tempStatusTextElement.innerHTML = `${data.value}°C`;
+
+                                        tempInfoContainer.classList.remove('bg-success', 'bg-danger', 'bg-secondary', 'bg-warning');
+                                        // if (data.statusBgClass) {
+                                        //     tempInfoContainer.classList.add(data.statusBgClass);
+                                        // }
+
+                                        // tempInfoContainer.classList.remove('bg-success', 'bg-danger', 'bg-secondary', 'bg-warning');
+
+                                        if (data.temp >= 40) {
+                                            tempInfoContainer.classList.add('bg-danger');
+                                        } else if (data.temp<=40 && data.temp>=35) {
+                                            tempInfoContainer.classList.add('bg-warning');
+                                        } else {
+                                            tempInfoContainer.classList.add('bg-success');  
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Fetch error for MSEB info:', error);
+                                        tempStatusTextElement.textContent = 'Error';
+                                        tempInfoContainer.className = 'temp-container bg-warning'; // Indicate error state
+                                    });
+                            }
+
+                            // Initial call to display status immediately upon page load
+                            updateTempInfoDisplay();
+                            // Set interval for periodic updates (every 15 seconds)
+                            // Store the interval ID on the window object to allow potential clearing if needed
+                            window.tempUpdateInterval = setInterval(updateTempInfoDisplay, 200000);
+                        </script>
+                </li>
+                <li class="nav-item">
+                        <div class="mseb-container {{ $bgClass ?? '' }}" id="mseb-container">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="text-white-50">MSEB &nbsp;</span>
+                      <h6 class="text-white mb-0" id="mseb-text">{{ $mseb ?? 'N/A' }}</h6>&nbsp;
+                      <span class="text-white-50 mb-0 fw-bold" id="mseb-uptime">Since {{ $updowntime ?? '...' }}</span>
+                    </div>
+                  </div>
+                  <script>
+                            // This script is placed directly after the mseb-container element
+                            // so the elements are guaranteed to be available when the script runs.
+                            const msebInfoContainer = document.getElementById('mseb-container');
+                            const msebStatusTextElement = document.getElementById('mseb-text');
+                            const msebDurationTextElement = document.getElementById('mseb-uptime');
+
+                            function updateMsebInfoDisplay() {
+                                // Check if elements exist before attempting to update them.
+                                // This is a safeguard, though they should always be present in the header.
+                                if (!msebInfoContainer || !msebStatusTextElement || !msebDurationTextElement) {
+                                    console.error('MSEB info elements not found in header. Clearing update interval.');
+                                    // Clear the interval if elements are unexpectedly missing
+                                    clearInterval(window.msebUpdateInterval);
+                                    return;
+                                }
+
+                                fetch("{{ route('admin.dashboard.mseb') }}")
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            throw new Error(`HTTP error! status: ${response.status}`);
+                                        }
+                                        return response.json();
+                                    })
+                                    .then(data => {
+                                        msebStatusTextElement.innerHTML = data.msebStatus;
+                                        msebDurationTextElement.innerHTML = "<strong>Since " + (data.msebDuration || "") + "</strong>";
+
+                                        msebInfoContainer.classList.remove('bg-success', 'bg-danger', 'bg-secondary', 'bg-warning');
+                                        if (data.statusBgClass) {
+                                            msebInfoContainer.classList.add(data.statusBgClass);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Fetch error for MSEB info:', error);
+                                        msebStatusTextElement.textContent = 'Error';
+                                        msebDurationTextElement.textContent = 'Load failed';
+                                        msebInfoContainer.className = 'mseb-container bg-warning'; // Indicate error state
+                                    });
+                            }
+
+                            // Initial call to display status immediately upon page load
+                            updateMsebInfoDisplay();
+                            // Set interval for periodic updates (every 15 seconds)
+                            // Store the interval ID on the window object to allow potential clearing if needed
+                            window.msebUpdateInterval = setInterval(updateMsebInfoDisplay, 15000);
+                        </script>
+                  
+                    </li>
+              </ul>
+
+              <!-- /mseb container -->
+                
+              <ul class="navbar-nav flex-row align-items-center">
                 <!-- Place this tag where you want the button to render. -->
 
                 <!-- User -->

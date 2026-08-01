@@ -31,6 +31,7 @@
                 $selectedRole = old('role', $selectedRole ?? ($viewUser?->getRoleNames()->first() ?? ''));
                 $selectedLocationIds = old('location', $selectedLocationIds ?? []);
                 $selectedLocationIds = collect($selectedLocationIds)->map(fn ($id) => (string) $id)->all();
+                $canManageUserAccess = auth()->user()?->hasRole('super-admin') ?? false;
             @endphp
 
             <form method="POST" enctype="multipart/form-data" action="{{ route('users.update', $user->id) }}">
@@ -62,6 +63,7 @@
                             class="form-control @error('email') is-invalid @enderror"
                             value="{{ old('email', data_get($viewUser, 'email', '')) }}"
                             placeholder="example@gmail.com"
+                            @if(!$canManageUserAccess) disabled @endif
                         >
                         @error('email')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -70,7 +72,7 @@
 
                     <div class="col-12">
                         <label class="form-label" for="role">Role</label>
-                        <select id="role" class="select2 form-select @error('role') is-invalid @enderror" name="role">
+                        <select id="role" class="select2 form-select @error('role') is-invalid @enderror" name="role" @if(!$canManageUserAccess) disabled @endif>
                             <option value="">Select Role</option>
                             @foreach ($roles as $role)
                                 <option value="{{ $role->name }}" @selected((string)($selectedRole ?? '') === (string)$role->name)>
@@ -90,6 +92,7 @@
                             class="select2 form-select @error('location') is-invalid @enderror"
                             name="location[]"
                             multiple
+                            @if(!$canManageUserAccess) disabled @endif
                         >
                             @foreach ($locations as $loc)
                                 <option value="{{ $loc->id }}" @selected(in_array((string) $loc->id, $selectedLocationIds, true))>

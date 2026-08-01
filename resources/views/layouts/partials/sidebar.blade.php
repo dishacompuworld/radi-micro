@@ -37,66 +37,86 @@
               </a>
 
               <ul class="menu-sub">
+                @can('add-server')
                 <li class="menu-item {{ request()->routeIs('server.create') ? 'active' : '' }}">
                   <a href="{{ route('server.create')}}" class="menu-link">
                     <div data-i18n="Add Microtik">Add Microtik</div>
                   </a>
                 </li>
+                @endcan
                 <li class="menu-item {{ request()->routeIs('server.index') ? 'active' : '' }}">
                   <a href="{{ route('server.index')}}" class="menu-link">
                     <div data-i18n="Microtiks">Microtiks</div>
                   </a>
                 </li>
+                @can('view-serverstats')
                 <li class="menu-item {{ request()->routeIs('stats.index') ? 'active' : '' }}">
                   <a href="{{ route('stats.index')}}" class="menu-link">
                     <div data-i18n="Statistics">Statistics</div>
                   </a>
                 </li>
+                @endcan
+                @can('view-system-health')
                 <li class="menu-item {{ request()->routeIs('microtik.system.health') ? 'active' : '' }}">
                   <a href="{{ route('microtik.system.health')}}" class="menu-link">
                     <div data-i18n="System Health">System Health</div>
                   </a>
                 </li>
+                @endcan
+                @can('view-neighbors')
                 <li class="menu-item {{ request()->routeIs('microtik.ip.neighbors') ? 'active' : '' }}">
                   <a href="{{ route('microtik.ip.neighbors')}}" class="menu-link">
                     <div data-i18n="Neighbours">Neighbours</div>
                   </a>
                 </li>
+                @endcan
                 <li class="menu-item {{ request()->routeIs('pppoe.allactivenew') ? 'active' : '' }}">
                   <a href="{{ route('pppoe.allactivenew')}}" class="menu-link">
                     <div data-i18n="Active Users">Active Users</div>
                   </a>
                 </li>
+                @can('view-sheduler')
                 <li class="menu-item {{ request()->routeIs('shedule.show') ? 'active' : '' }}">
                   <a href="{{ route('shedule.show')}}" class="menu-link">
                     <div data-i18n="Sheduler">Sheduler</div>
                   </a>
                 </li>
+                @endcan
+                @can('view-scripts')
                 <li class="menu-item {{ request()->routeIs('microtik.scripts') ? 'active' : '' }}">
                   <a href="{{ route('microtik.scripts')}}" class="menu-link">
                     <div data-i18n="Script">Script</div>
                   </a>
                 </li>
+                @endcan
+                @can('view-services')
                 <li class="menu-item {{ request()->routeIs('show.services') ? 'active' : '' }}">
                   <a href="{{ route('show.services')}}" class="menu-link">
                     <div data-i18n="Services">Services</div>
                   </a>
                 </li>
+                @endcan
+                @can('view-microtik-logs')
                 <li class="menu-item {{ request()->routeIs('microtik.log') ? 'active' : '' }}">
                   <a href="{{ route('microtik.log')}}" class="menu-link">
                     <div data-i18n="Logs">Logs</div>
                   </a>
                 </li>
+                @endcan
+                @can('view-microtik-history')
                 <li class="menu-item {{ request()->routeIs('system.history') ? 'active' : '' }}">
                   <a href="{{ route('system.history')}}" class="menu-link">
                     <div data-i18n="History">History</div>
                   </a>
                 </li>
+                @endcan
+                @can('view-commands')
                 <li class="menu-item {{ request()->routeIs('view.command') ? 'active' : '' }}">
                   <a href="{{ route('view.command')}}" class="menu-link">
                     <div data-i18n="Terminal">Terminal</div>
                   </a>
                 </li>
+                @endcan
               </ul>
             </li>
 
@@ -118,11 +138,13 @@
               </a>
 
               <ul class="menu-sub">
+                @can('view-subscriber')
                 <li class="menu-item {{ request()->routeIs('search.subscriber') ? 'active' : '' }}">
                   <a href="{{ route('search.subscriber')}}" class="menu-link">
                     <div data-i18n="Search Suscribers">Search Suscribers</div>
                   </a>
                 </li>
+                @endcan
 
                 <li class="menu-item {{ request()->routeIs('search.subscriberall') ? 'active' : '' }}">
                   <a href="{{ route('search.subscriberall')}}" class="menu-link">
@@ -136,11 +158,13 @@
                   </a>
                 </li>
 
+                @can('view-locations')
                 <li class="menu-item {{ request()->routeIs('location.show') ? 'active' : '' }}">
                   <a href="{{ route('location.show')}}" class="menu-link">
                     <div data-i18n="Locations">Locations</div>
                   </a>
                 </li>
+                @endcan
 
                 <li class="menu-item {{ request()->routeIs('locationdetails.show') ? 'active' : '' }}">
                   <a href="{{ route('locationdetails.show')}}" class="menu-link">
@@ -148,23 +172,29 @@
                   </a>
                 </li>
 
+                @can('view-packages')
                 <li class="menu-item {{ request()->routeIs('packages.show') ? 'active' : '' }}">
                   <a href="{{ route('packages.show')}}" class="menu-link">
                     <div data-i18n="Packages">Packages</div>
                   </a>
                 </li>
+                @endcan
 
+                @can('view-radius-logs')
                 <li class="menu-item {{ request()->routeIs('show.accesslogs') ? 'active' : '' }}">
                   <a href="{{ route('show.accesslogs')}}" class="menu-link">
                     <div data-i18n="Access Request Logs">Access Request Logs</div>
                   </a>
                 </li>
+                @endcan
 
+                @can('view-admin-radius-logs')
                 <li class="menu-item {{ request()->routeIs('admin.accesslogs') ? 'active' : '' }}">
                   <a href="{{ route('admin.accesslogs')}}" class="menu-link">
                     <div data-i18n="Admin Access Logs">Admin Access Logs</div>
                   </a>
                 </li>
+                @endcan
               </ul>
             </li>
 
@@ -175,7 +205,7 @@
                 $isPrtgActive = collect($prtgRoutes)->contains(fn($route) => request()->routeIs($route));
             @endphp
 
-
+            @can('view-prtg')
             <!-- PRTG -->
             <li class="menu-item {{ $isPrtgActive ? 'active open' : '' }}">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
@@ -209,6 +239,8 @@
                 </li>
               </ul>
             </li>
+            @endcan
+
             <!-- Suscribers -->
 
             @php
@@ -220,6 +252,7 @@
 
             
             <!-- OLT -->
+            @can('show-op-power')
             <li class="menu-item {{ $isOltActive ? 'active open' : '' }}">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-network-chart"></i>
@@ -233,19 +266,24 @@
                   </a>
                 </li>
 
+                @can('add-ont')
                 <li class="menu-item {{ request()->routeIs('add.ont') ? 'active' : '' }}">
                   <a href="{{ route('add.ont')}}" class="menu-link">
                     <div data-i18n="Add ONT">Add ONT</div>
                   </a>
                 </li>
+                @endcan
 
+                @can('rename-ont')
                 <li class="menu-item {{ request()->routeIs('edit.ont') ? 'active' : '' }}">
                   <a href="{{ route('edit.ont')}}" class="menu-link">
                     <div data-i18n="Edit ONT">Edit ONT</div>
                   </a>
                 </li>
+                @endcan
               </ul>
             </li>
+            @endcan
 
             <!-- Utilities -->
             <li class="menu-header small text-uppercase"><span class="menu-header-text">Utilities</span></li>
@@ -257,12 +295,14 @@
               </a>
             </li>
 
+            @can('send-whatsapp')
             <li class="menu-item {{ request()->routeIs('whatsapp.msg') ? 'active' : '' }}">
               <a href="{{ route('whatsapp.msg')}}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-message"></i>
                 <div data-i18n="Send Message">Send Message</div>
               </a>
             </li>
+            @endcan
 
             @php
                 $adminRoutes = [
@@ -275,33 +315,41 @@
             <li class="menu-header small text-uppercase">
               <span class="menu-header-text">Admin</span>
             </li>
+            @can('view-access-control')
             <li class="menu-item {{ $isAdminActive ? 'active open' : '' }}">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-shield"></i>
                 <div data-i18n="OLT">Access Control</div>
               </a>
-
+              
               <ul class="menu-sub">
+                @can('view-permission')
                 <li class="menu-item {{ request()->routeIs('permissions.index') ? 'active' : '' }}">
                   <a href="{{ route('permissions.index')}}" class="menu-link">
                     <div data-i18n="Permissions">Permissions</div>
                   </a>
                 </li>
+                @endcan
 
+                @can('view-role')
                 <li class="menu-item {{ request()->routeIs('roles.index') ? 'active' : '' }}">
                   <a href="{{ route('roles.index')}}" class="menu-link">
                     <div data-i18n="Roles">Roles</div>
                   </a>
                 </li>
+                @endcan
               </ul>
             </li>
+            @endcan
 
+            @can('view-users')
             <li class="menu-item {{ request()->routeIs('users.index') ? 'active' : '' }}">
               <a href="{{ route('users.index')}}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-user"></i>
                 <div data-i18n="Users">Users</div>
               </a>
             </li>
+            @endcan
 
             <li class="menu-item {{ request()->routeIs('profile.edit') ? 'active' : '' }}">
               <a href="{{ route('profile.edit')}}" class="menu-link">
@@ -317,6 +365,7 @@
                 $isLogsActive = collect($logsRoutes)->contains(fn($route) => request()->routeIs($route));
             @endphp
 
+            @can('show-log')
             <li class="menu-item {{ $isLogsActive ? 'active open' : '' }}">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-history"></i>
@@ -330,27 +379,35 @@
                   </a>
                 </li>
 
+                 @can('all-logs')
                 <li class="menu-item {{ request()->routeIs('show.alllogs') ? 'active' : '' }}">
                   <a href="{{ route('show.alllogs')}}" class="menu-link">
                     <div data-i18n="All Logs">All Logs</div>
                   </a>
                 </li>
+                @endcan
               </ul>
             </li>
+            @endcan
 
+            @can('show-alerts')
             <li class="menu-item {{ request()->routeIs('alert.index') ? 'active' : '' }}">
               <a href="{{ route('alert.index')}}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-bell"></i>
                 <div data-i18n="Alert Messages">Alert Messages</div>
               </a>
             </li>
+            @endcan
 
+            @can('view-settings')
             <li class="menu-item {{ request()->routeIs('settings') ? 'active' : '' }}">
               <a href="{{ route('settings')}}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-cog"></i>
                 <div data-i18n="Settings">Settings</div>
               </a>
             </li>
+            @endcan
+
             <!-- Admin -->
           </ul>
         </aside>

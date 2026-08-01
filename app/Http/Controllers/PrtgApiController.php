@@ -28,6 +28,7 @@ class PrtgApiController extends Controller
     private $allTrafficGraphId;
     private $mainProbId;
     private $msebProbId;
+    private $tempProbId;
     
     /**
      * Constructor with middleware setup and configuration loading
@@ -585,6 +586,42 @@ class PrtgApiController extends Controller
     }
 
 
+    public function getTempStatusData()
+    {
+        $sensorId = $this->tempProbId;
+        
+        try {
+            $response = $this->makeApiRequest('/api/getsensordetails.json', [
+                'id' => $sensorId
+            ]);
+            // return $response->json();
+            if ($response->successful()) {
+
+                // return $response->json();
+                $sensorData = $response->json();
+                $sensor = $sensorData['sensordata'];
+                
+                return [
+                    'value' => explode(' ', $sensor['lastvalue'])[0] ?? 'Unknown',
+                ];
+            }
+            
+            return [
+                'value' => 'N/A',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exception getting Temprature status data', [
+                'id' => $sensorId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'value' => 'N/A',
+            ];
+        }
+    }
+
+
 
     public function apitest(Request $request){
 
@@ -753,6 +790,12 @@ class PrtgApiController extends Controller
     public function getMsebInfoAjax(): JsonResponse
     {
         $data = $this->getProcessedMsebData();
+        return response()->json($data);
+    }
+
+    public function getTempInfoAjax(): JsonResponse
+    {
+        $data = $this->getTempStatusData();
         return response()->json($data);
     }
 

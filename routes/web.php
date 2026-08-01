@@ -157,6 +157,7 @@ Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
     Route::get('live-graph', [PrtgApiController::class, 'showLiveGraph'])->name('live.graph.page'); // Renamed for clarity
     Route::get('checkmseb',[PrtgApiController::class, 'getMsebStatusData'])->name('check.mseb');
     Route::get('mseb-info', [PrtgApiController::class, 'getMsebInfoAjax'])->name('admin.dashboard.mseb');
+    Route::get('temp-info', [PrtgApiController::class, 'getTempInfoAjax'])->name('admin.dashboard.temp');
 
 
     Route::get('pppoe/newactive', [PPPoEUserController::class, 'newactiveserver'])->name('pppoe.newactive');

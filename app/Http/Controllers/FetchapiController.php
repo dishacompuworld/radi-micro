@@ -1352,6 +1352,35 @@ class FetchapiController extends Controller
         return response()->json(['tooltip_data' => 'No MAC address provided']);
     }
 
+    public function getdisablesubscribers(){
+
+        $this->login();
+        $tokan = session()->get('tokan');
+
+        $title = "Test API";
+        // $idd = $request->id;
+
+        // $response = Http::withHeaders([
+        //     'Content-Type' => 'application/json',
+        //     'Version' => 'HTTP/1.0',
+        //     'Accept' => 'application/json',
+        //     'Authentication' => $tokan
+        // ])->get('disha.xceednet.com/location_dashboard');
+
+
+        $api_url = 'https://disha.xceednet.com/location_dashboard';
+
+
+        $response = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                    'Authentication' => $tokan
+                ])->get($api_url);
+
+        // $test =  strip_tags($response['data'][0][0]);
+        return $response['disabled_subscribers_count'];
+    }
+
     public function testapi(Request $request){
 
         // $this->login();

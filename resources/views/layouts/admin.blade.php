@@ -31,6 +31,51 @@
         <!-- DataTables CSS -->
         <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css" />
 
+        <style>
+    /* Ensure all items in the user menu are vertically centered */
+    .user-menu {
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .mseb-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 0.3rem; /* Slightly smaller radius */
+        padding: 0.4rem 0.75rem; /* Reduced padding for a more compact look */
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        min-width: 150px; /* Give it a minimum width to prevent squishing */
+        height: 40px;
+    }
+
+    /* Target the text elements specifically inside the MSEB container */
+    .mseb-container span {
+        font-size: 0.8rem !important; /* Smaller font for the "MSEB Status" label */
+    }
+    .mseb-container h6 {
+        font-size: 0.8rem !important; /* Smaller font for the status text 'Up'/'Down' */
+        /* font-weight: 600 !important; */
+        /* line-height: 1.2; */
+    }
+
+	.temp-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 0.3rem; /* Slightly smaller radius */
+        padding: 0.4rem 0.75rem; /* Reduced padding for a more compact look */
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        min-width: 150px; /* Give it a minimum width to prevent squishing */
+        height: 40px;
+    }
+
+    /* Target the text elements specifically inside the MSEB container */
+    .temp-container span {
+        font-size: 0.8rem !important; /* Smaller font for the "MSEB Status" label */
+        font-weight: 600 !important;
+    }
+
+</style>
         
     </head>
     <body>

@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use RouterOS\Client;
-use RouterOS\Config;
 use App\Models\Server;
 use App\Models\RouterosAPI as LegacyRouterosAPI;
 use Illuminate\Http\Request;
@@ -13,15 +11,11 @@ use Yajra\DataTables\DataTables;
 
 class PPPoEUserController extends Controller
 {
-    private ?Client $client = null;
+    private ?LegacyRouterosAPI $api = null;
     private int $connectionTimeout = 5;
 
     /**
-     * Connect to a MikroTik server using evilfreelancer RouterOS client
-     *
-     * @param int $serverId
-     * @return Server
-     * @throws \Exception
+     * Connect to a MikroTik server using the project RouterOS adapter.
      */
     private function connectToServer($serverId)
     {
@@ -31,83 +25,117 @@ class PPPoEUserController extends Controller
             throw new \Exception("Server with ID {$serverId} not found");
         }
 
-        $config = (new Config())
-            ->set('host', $server->mip)
-            ->set('user', $server->username)
-            ->set('pass', $server->password)
-            ->set('port', $server->port ?? 8728)
-            ->set('timeout', $this->connectionTimeout)
-            ->set('ssl', false);
+        $this->api = new LegacyRouterosAPI();
 
-        $this->client = new Client($config);
+        if (!$this->api->connect($server->mip, $server->username, $server->password)) {
+            throw new \Exception("Unable to connect to router {$server->name} ({$server->mip})");
+        }
 
         return $server;
     }
 
     /**
-     * Execute API command with error handling
-     * Supports a simple query without params or equality filters when params provided
+     * Execute API command with error handling.
      */
     private function executeCommand(string $command, array $params = [])
     {
-        if (!$this->client) {
+        if (!$this->api) {
             throw new \Exception('No RouterOS client available');
         }
 
-        // Simple query
-        if (empty($params)) {
-            return $this->client->query($command)->read();
-        }
-
-        $q = $this->client->query($command);
-        foreach ($params as $k => $v) {
-            if (method_exists($q, 'equal')) {
-                $q->equal($k, $v);
-            }
-        }
-
-        return $q->read();
+        return $this->api->comm($command, $params);
     }
 
     /**
-     * Log message to MikroTik
+     * Send a message to MikroTik and return the router response.
      */
-    private function logToMikrotik(string $message): void
+    private function logToMikrotik(string $message)
     {
-        if (!$this->client) {
-            return;
+        if (!$this->api) {
+            return null;
         }
 
         try {
-            if (method_exists($this->client, 'query')) {
-                // Attempt to send a log entry; use a best-effort approach
-                $this->client->query('/log/error')->equal('message', $message)->read();
-            }
+            $this->api->write('/log/error', false);
+            $this->api->write('=message=' . $message, true);
+            return $this->api->read();
         } catch (\Throwable $e) {
             Log::warning('Error writing log to MikroTik: ' . $e->getMessage());
+            return null;
         }
     }
 
     /**
-     * Safely disconnect the current RouterOS client if present
+     * Send a message to MikroTik and fetch active PPPoE users in the same session.
+     */
+    private function logAndFetchActiveUsers(string $message)
+    {
+        if (!$this->api) {
+            return [];
+        }
+
+        try {
+            $this->api->write('/log/error', false);
+            $this->api->write('=message=' . $message, false);
+            $this->api->write('/ppp/active/print', true);
+
+            $response = $this->api->read();
+
+            return $this->normalizeRows($response);
+        } catch (\Throwable $e) {
+            Log::warning('Error writing log to MikroTik and fetching active users: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Safely disconnect the current RouterOS client if present.
      */
     private function disconnectClient(): void
     {
-        if (!$this->client) {
+        if (!$this->api) {
             return;
         }
 
         try {
-            if (method_exists($this->client, 'disconnect')) {
-                $this->client->disconnect();
-            } elseif (method_exists($this->client, 'close')) {
-                $this->client->close();
-            }
+            $this->api->disconnect();
         } catch (\Throwable $e) {
             Log::warning('Error disconnecting RouterOS client: ' . $e->getMessage());
         }
 
-        $this->client = null;
+        $this->api = null;
+    }
+
+    /**
+     * Normalize RouterOS rows into a consistent associative array format.
+     */
+    private function normalizeRows($rows): array
+    {
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        $normalizedRows = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                if (isset($row['name']) || isset($row['address']) || isset($row['.id'])) {
+                    $normalizedRows[] = $row;
+                } elseif (array_is_list($row)) {
+                    foreach ($row as $nestedRow) {
+                        if (is_array($nestedRow) && (isset($nestedRow['name']) || isset($nestedRow['address']) || isset($nestedRow['.id']))) {
+                            $normalizedRows[] = $nestedRow;
+                        } elseif (is_object($nestedRow)) {
+                            $normalizedRows[] = (array) $nestedRow;
+                        }
+                    }
+                }
+            } elseif (is_object($row)) {
+                $normalizedRows[] = (array) $row;
+            }
+        }
+
+        return $normalizedRows;
     }
 
     /**
@@ -176,7 +204,7 @@ class PPPoEUserController extends Controller
             $this->executeCommand('/ppp/active/remove', ['.id' => $request->id]);
 
             activity()
-                ->causedBy(auth()->user())
+                ->causedBy(Auth::user())
                 ->useLog('Active Users')
                 ->log('PPPoE User ' . $request->cname . ' Deleted from ' . $server->name);
 
@@ -201,7 +229,7 @@ class PPPoEUserController extends Controller
             $this->executeCommand('/ppp/active/remove', ['.id' => $request->id]);
 
             activity()
-                ->causedBy(auth()->user())
+                ->causedBy(Auth::user())
                 ->useLog('Active Users - API')
                 ->log('PPPoE User ' . $request->cname . ' Deleted from ' . $server->name);
 
@@ -213,7 +241,7 @@ class PPPoEUserController extends Controller
         } catch (\Throwable $e) {
             Log::error('Error in deletapi method: ' . $e->getMessage());
             activity()
-                ->causedBy(auth()->user())
+                ->causedBy(Auth::user())
                 ->useLog('Active Users - API')
                 ->log('PPPoE User ' . $request->cname . ' Deletion Failed');
 
@@ -235,7 +263,7 @@ class PPPoEUserController extends Controller
             $ip = $request->get('ip');
             $pingCount = min(intval($request->get('time', 5)), 30);
 
-            $message = auth()->user()->name . ' checking ping for user ' . $username . '.';
+            $message = Auth::user()->name . ' checking ping for user ' . $username . '.';
             $this->logToMikrotik($message);
 
             $iterations = 0;
@@ -267,8 +295,8 @@ class PPPoEUserController extends Controller
         $ip = $request->get('ip');
         $pingCount = min(intval($request->get('time', 5)), 30);
 
-        $message = auth()->user()->name . ' checking ping for user ' . $username . ' from API';
-        activity()->causedBy(auth()->user())->useLog('Ping - api')->log('Checking ping for user '. $username . ' of ' . $ip);
+        $message = Auth::user()->name . ' checking ping for user ' . $username . ' from API';
+        activity()->causedBy(Auth::user())->useLog('Ping - api')->log('Checking ping for user '. $username . ' of ' . $ip);
         $this->logToMikrotik($message);
 
         $pingResult = $this->executeCommand('/ping', ['address' => $ip, 'count' => 1]);
@@ -370,23 +398,21 @@ class PPPoEUserController extends Controller
                     $this->connectToServer($server->id);
 
                     $message = (Auth::check() ? Auth::user()->name : 'system') . ' checking active users.';
-                    $this->logToMikrotik($message);
+                    $rows = $this->logAndFetchActiveUsers($message);
 
-                    $rows = [];
-                    foreach ([
-                        '/ppp/active/print',
-                        'ppp/active/print',
-                        '/ppp/active',
-                        'ppp/active',
-                    ] as $command) {
-                        try {
-                            $result = $this->executeCommand($command);
-                            if (is_array($result) && !empty($result)) {
-                                $rows = $result;
-                                break;
+                    if (empty($rows)) {
+                        foreach ([
+                            '/ppp/active/print'
+                        ] as $command) {
+                            try {
+                                $result = $this->executeCommand($command);
+                                if (is_array($result) && !empty($result)) {
+                                    $rows = $result;
+                                    break;
+                                }
+                            } catch (\Throwable $e) {
+                                Log::warning('PPPoE query failed for ' . $command . ' on server ' . $server->id . ': ' . $e->getMessage());
                             }
-                        } catch (\Throwable $e) {
-                            Log::warning('PPPoE query failed for ' . $command . ' on server ' . $server->id . ': ' . $e->getMessage());
                         }
                     }
 
@@ -405,28 +431,7 @@ class PPPoEUserController extends Controller
                         }
                     }
 
-                    if (!is_array($rows)) {
-                        continue;
-                    }
-
-                    $normalizedRows = [];
-                    foreach ($rows as $row) {
-                        if (is_array($row)) {
-                            if (isset($row['name']) || isset($row['address']) || isset($row['.id'])) {
-                                $normalizedRows[] = $row;
-                            } elseif (array_is_list($row)) {
-                                foreach ($row as $nestedRow) {
-                                    if (is_array($nestedRow) && (isset($nestedRow['name']) || isset($nestedRow['address']) || isset($nestedRow['.id']))) {
-                                        $normalizedRows[] = $nestedRow;
-                                    } elseif (is_object($nestedRow)) {
-                                        $normalizedRows[] = (array) $nestedRow;
-                                    }
-                                }
-                            }
-                        } elseif (is_object($row)) {
-                            $normalizedRows[] = (array) $row;
-                        }
-                    }
+                    $normalizedRows = $this->normalizeRows($rows);
 
                     foreach (array_reverse($normalizedRows) as $rowArray) {
                         if (!is_array($rowArray) && !is_object($rowArray)) {
@@ -500,7 +505,7 @@ class PPPoEUserController extends Controller
                 ->make(true);
         }
 
-        activity()->causedBy(auth()->user())->useLog('Active Users')->log('All Active Users checked.');
+        activity()->causedBy(Auth::user())->useLog('Active Users')->log('All Active Users checked.');
 
         return view('PPPoE.newactivenew', compact('title', 'servers', 'checked', 'search'));
     }
@@ -536,23 +541,21 @@ class PPPoEUserController extends Controller
                 $this->connectToServer($serveriid->id);
 
                 $message = (Auth::check() ? Auth::user()->name : 'system') . ' checking active users.';
-                $this->logToMikrotik($message);
+                $rows = $this->logAndFetchActiveUsers($message);
 
-                $rows = [];
-                foreach ([
-                    '/ppp/active/print',
-                    'ppp/active/print',
-                    '/ppp/active',
-                    'ppp/active',
-                ] as $command) {
-                    try {
-                        $result = $this->executeCommand($command);
-                        if (is_array($result) && !empty($result)) {
-                            $rows = $result;
-                            break;
+                if (empty($rows)) {
+                    foreach ([
+                        '/ppp/active/print'
+                    ] as $command) {
+                        try {
+                            $result = $this->executeCommand($command);
+                            if (is_array($result) && !empty($result)) {
+                                $rows = $result;
+                                break;
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('PPPoE query failed for ' . $command . ' on server ' . $serveriid->id . ': ' . $e->getMessage());
                         }
-                    } catch (\Throwable $e) {
-                        Log::warning('PPPoE query failed for ' . $command . ' on server ' . $serveriid->id . ': ' . $e->getMessage());
                     }
                 }
 
@@ -571,9 +574,7 @@ class PPPoEUserController extends Controller
                     }
                 }
 
-                if (!is_array($rows)) {
-                    $rows = [];
-                }
+                $rows = $this->normalizeRows($rows);
 
                 $finalarray = [];
                 foreach (array_reverse($rows) as $row) {
@@ -649,7 +650,7 @@ class PPPoEUserController extends Controller
         }
 
         if ($serveriid) {
-            activity()->causedBy(auth()->user())->useLog('Active Users')->log('Active users checked from ' . $serveriid->name);
+            activity()->causedBy(Auth::user())->useLog('Active Users')->log('Active users checked from ' . $serveriid->name);
         }
 
         return view('PPPoE.newactive', compact('title', 'iid', 'servers', 'search', 'urll'));
