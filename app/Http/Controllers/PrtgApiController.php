@@ -49,7 +49,8 @@ class PrtgApiController extends Controller
         $this->apiKey = env('PRTG_API_KEY', null);
         $this->allTrafficGraphId = env('PRTG_ALL_TRAFFIC_GRAPH_ID', null);
         $this->mainProbId = env('PRTG_MAIN_PROB_ID', null);
-        $this->msebProbId = env('PRTG_MSEB');
+        $this->msebProbId = env('PRTG_MSEB', null);
+        $this->tempProbId = env('PRTG_TEMP', null);
     }
 
     /**
@@ -75,10 +76,10 @@ class PrtgApiController extends Controller
         // Log the request (excluding the API token)
         $logParams = $params;
         $logParams['apitoken'] = '[REDACTED]';
-        Log::info('PRTG API request', [
-            'url' => $url,
-            'params' => $logParams
-        ]);
+        // Log::info('PRTG API request', [
+        //     'url' => $url,
+        //     'params' => $logParams
+        // ]);
         
         try {
             $response = Http::timeout(10)->get($url, $params);

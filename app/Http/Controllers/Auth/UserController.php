@@ -226,7 +226,7 @@ class UserController extends Controller
         }
 
         // $notification = notify('user updated successfully');
-        return redirect()->route('users.index');
+        return redirect()->route('profile.edit');
     }
 
     public function profile(){

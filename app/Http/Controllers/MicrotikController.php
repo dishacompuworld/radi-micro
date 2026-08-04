@@ -591,30 +591,83 @@ class MicrotikController extends Controller
                     $API->debug = false;
     
                     if ($API->connect($ip, $user, $password)) {
-    
-                        // Log the username to MikroTik
-                        $logs = $API->comm('/log/print');
-                        $logs = array_reverse($logs);
 
-                        $logs = array_filter($logs, function ($log) {
-                            return !preg_match('/system.*info.*account/i', $log['topics']);
-                        });
-                        return DataTables::of($logs)
+                        // Fetch logs and normalize keys to support RouterOS v6 and v7 formats
+                        $rawLogs = $API->comm('/log/print');
+                        // log raw response for debugging
+                        Log::info('MicrotikController viewLog raw type: ' . gettype($rawLogs) . ' count: ' . (is_array($rawLogs) ? count($rawLogs) : 0));
+                        Log::info('MicrotikController viewLog raw sample: ' . json_encode(is_array($rawLogs) ? array_slice($rawLogs, 0, 5) : $rawLogs));
+                        $rawLogs = is_array($rawLogs) ? array_reverse($rawLogs) : [];
+
+                        $normalized = [];
+                        foreach ($rawLogs as $item) {
+                            // ensure item is array
+                            if (!is_array($item)) continue;
+
+                            // normalize message
+                            if (isset($item['message'])) {
+                                $message = $item['message'];
+                            } elseif (isset($item['msg'])) {
+                                $message = $item['msg'];
+                            } elseif (isset($item['log'])) {
+                                $message = $item['log'];
+                            } else {
+                                $message = '';
+                            }
+
+                            // normalize topics (array or string)
+                            if (isset($item['topics'])) {
+                                $topics = $item['topics'];
+                                if (is_array($topics)) {
+                                    $topics = implode(', ', $topics);
+                                }
+                            } elseif (isset($item['topic'])) {
+                                $topics = $item['topic'];
+                            } else {
+                                $topics = '';
+                            }
+
+                            // normalize time (string or unix timestamp)
+                            if (isset($item['time'])) {
+                                $time = $item['time'];
+                            } elseif (isset($item['timestamp'])) {
+                                // some RouterOS versions return epoch
+                                $ts = $item['timestamp'];
+                                if (is_numeric($ts)) {
+                                    $time = date('Y-m-d H:i:s', (int)$ts);
+                                } else {
+                                    $time = $ts;
+                                }
+                            } else {
+                                $time = '';
+                            }
+
+                            // filter out account info logs
+                            if (preg_match('/system.*info.*account/i', $topics)) {
+                                continue;
+                            }
+
+                            $normalized[] = array_merge($item, [
+                                'message' => $message,
+                                'topics' => $topics,
+                                'time' => $time,
+                            ]);
+                        }
+
+                        Log::info('MicrotikController viewLog normalized count: ' . count($normalized));
+                        return DataTables::of($normalized)
                                 ->addIndexColumn()
-                                ->addColumn('time1',function ($data){
-                                    $time = $data['time'];
-                                    return $time;
+                                ->addColumn('time1', function ($data) {
+                                    return $data['time'] ?? '';
                                 })
-                                ->addColumn('topics1',function ($data){
-                                    $topics = $data['topics'];
-                                    return $topics;
+                                ->addColumn('topics1', function ($data) {
+                                    return $data['topics'] ?? '';
                                 })
-                            
                                 ->rawColumns(['time1','topics1'])
                                 ->make(true);
-    
-                        $API->disconnect(); 
-                        }
+
+                        $API->disconnect();
+                    }
                 }
     
             }

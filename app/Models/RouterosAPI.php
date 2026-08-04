@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class RouterosAPI extends Model
 {
@@ -42,7 +43,7 @@ class RouterosAPI extends Model
 public function debug($text)
 {
     if ($this->debug) {
-        echo $text . "\n";
+        Log::debug($text);
     }
 }
 

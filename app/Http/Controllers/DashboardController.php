@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index(){
+    public function index(Request $request){
         $title = 'Dashboard';
 
         activity()->causedBy(auth()->user())->useLog('Dashboard')->log('Dashboard Viewed');
@@ -60,12 +60,123 @@ class DashboardController extends Controller
 
         }
         $temp = $this->getTempInfoAjax();
+        $selectedPreset = $request->input('preset', 'current-year');
+        $selectedYear = (int) $request->input('year', now()->year);
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
+        $subscriberChartData = $this->getSubscriberChartData($request);
+        $availableYears = DB::table('subscribercount')
+            ->selectRaw('YEAR(datee) as year')
+            ->distinct()
+            ->pluck('year')
+            ->sort()
+            ->values()
+            ->all();
 
-        return view('dashboard',compact('title','userss','total_servers','total_locations','upsensorcount','downsensorcount','totalsensorcount','totalactiveuserc','msebstatus','temp','disabledsubscribers'));
+        if (empty($availableYears)) {
+            $availableYears = [(int) now()->year];
+        }
+
+        return view('dashboard', compact('title','userss','total_servers','total_locations','upsensorcount','downsensorcount','totalsensorcount','totalactiveuserc','msebstatus','temp','disabledsubscribers','subscriberChartData','availableYears','selectedPreset','selectedYear','fromDate','toDate'));
 
         // return view('dashboard',compact('title'));
     }
 
+
+    private function getSubscriberChartData(Request $request = null)
+    {
+        $query = DB::table('subscribercount')
+            ->select('datee', 'subcount');
+
+        $preset = $request?->input('preset', 'current-year');
+        $selectedYear = (int) ($request?->input('year', now()->year) ?? now()->year);
+        $fromDate = $request?->input('from_date');
+        $toDate = $request?->input('to_date');
+
+        if ($preset === 'previous-year') {
+            $query->whereYear('datee', $selectedYear - 1);
+        } elseif ($preset === 'last-month') {
+            $start = now()->subMonth()->startOfMonth()->toDateString();
+            $end = now()->subMonth()->endOfMonth()->toDateString();
+            $query->whereBetween('datee', [$start, $end]);
+        } elseif ($preset === 'current-month') {
+            $start = now()->startOfMonth()->toDateString();
+            $end = now()->endOfMonth()->toDateString();
+            $query->whereBetween('datee', [$start, $end]);
+        } elseif ($preset === 'current-year') {
+            $query->whereYear('datee', $selectedYear);
+        } elseif ($preset === 'custom') {
+            if ($fromDate && $toDate) {
+                if ($fromDate > $toDate) {
+                    [$fromDate, $toDate] = [$toDate, $fromDate];
+                }
+                $query->whereBetween('datee', [$fromDate, $toDate]);
+            } elseif ($fromDate) {
+                $query->whereDate('datee', '>=', $fromDate);
+            } elseif ($toDate) {
+                $query->whereDate('datee', '<=', $toDate);
+            }
+        } elseif ($preset === 'all') {
+            // keep all records
+        }
+
+        $records = $query->orderBy('datee', 'asc')->get()->sortBy(function ($record) {
+            return $record->datee;
+        })->values();
+
+        $datewiseLabels = [];
+        $datewiseSeries = [];
+        $monthwiseLabels = [];
+        $monthwiseSeries = [];
+        $monthlyData = [];
+
+        foreach ($records as $record) {
+            $date = \Carbon\Carbon::parse($record->datee);
+            $datewiseLabels[] = $date->format('d M Y');
+            $datewiseSeries[] = (int) $record->subcount;
+
+            $monthKey = $date->format('Y-M');
+            $monthLabel = $date->format('M Y');
+
+            if (!isset($monthlyData[$monthKey])) {
+                $monthlyData[$monthKey] = [
+                    'label' => $monthLabel,
+                    'value' => 0,
+                    'count' => 0,
+                ];
+            }
+
+            $monthlyData[$monthKey]['value'] += (int) $record->subcount;
+            $monthlyData[$monthKey]['count']++;
+        }
+
+        $sortedMonthKeys = array_keys($monthlyData);
+        sort($sortedMonthKeys);
+
+        foreach ($sortedMonthKeys as $monthKey) {
+            $data = $monthlyData[$monthKey];
+            $monthwiseLabels[] = $data['label'];
+            $monthwiseSeries[] = round($data['value'] / $data['count']);
+        }
+
+        return [
+            'datewise' => [
+                'labels' => $datewiseLabels,
+                'series' => $datewiseSeries,
+            ],
+            'monthwise' => [
+                'labels' => $monthwiseLabels,
+                'series' => $monthwiseSeries,
+            ],
+        ];
+    }
+
+    public function getSubscriberChartDataAjax(Request $request)
+    {
+        $chartData = $this->getSubscriberChartData($request);
+
+        return response()->json($chartData);
+    }
 
     public function getTempInfoAjax(){
 

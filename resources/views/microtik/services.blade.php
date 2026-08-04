@@ -150,6 +150,9 @@
                     setTimeout(function() {
                         $('#message-container').fadeOut('slow');
                     }, 5000); // 3000 milliseconds = 3 seconds
+                    if ($('#server-select').val()) {
+                        showStatus($('#server-select').val());
+                    }
                 }
             });
         }
@@ -173,6 +176,9 @@
                     setTimeout(function() {
                         $('#message-container').fadeOut('slow');
                     }, 5000); // 3000 milliseconds = 3 seconds
+                    if ($('#server-select').val()) {
+                        showStatus($('#server-select').val());
+                    }
                 }
             });
         }
@@ -196,6 +202,9 @@
                     setTimeout(function() {
                         $('#message-container').fadeOut('slow');
                     }, 5000); // 3000 milliseconds = 3 seconds
+                    if ($('#server-select').val()) {
+                        showStatus($('#server-select').val());
+                    }
                 }
             });
         }
@@ -219,6 +228,9 @@
                     setTimeout(function() {
                         $('#message-container').fadeOut('slow');
                     }, 5000); // 3000 milliseconds = 3 seconds
+                    if ($('#server-select').val()) {
+                        showStatus($('#server-select').val());
+                    }
                 }
             });
         }
@@ -242,6 +254,9 @@
                     setTimeout(function() {
                         $('#message-container').fadeOut('slow');
                     }, 5000); // 3000 milliseconds = 3 seconds
+                    if ($('#server-select').val()) {
+                        showStatus($('#server-select').val());
+                    }
                 }
             });
         }
@@ -265,6 +280,9 @@
                     setTimeout(function() {
                         $('#message-container').fadeOut('slow');
                     }, 5000); // 3000 milliseconds = 3 seconds
+                    if ($('#server-select').val()) {
+                        showStatus($('#server-select').val());
+                    }
                 }
             });
         }
@@ -288,6 +306,9 @@
                     setTimeout(function() {
                         $('#message-container').fadeOut('slow');
                     }, 5000); // 3000 milliseconds = 3 seconds
+                    if ($('#server-select').val()) {
+                        showStatus($('#server-select').val());
+                    }
                 }
             });
         }
@@ -296,6 +317,7 @@
             $('#server-select').on('change', function () {
                 if (this.value) {
                     $('#services-enabled-container').show();
+                    showStatus(this.value);
                 } else {
                     $('#services-enabled-container').hide();
                 }

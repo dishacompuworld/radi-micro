@@ -28,30 +28,30 @@
     <div class="col-sm-12">
       <div class="card">
         <div class="card-body">
-          <div class="form-group col-sm-3">
-              {{-- <form action="{{ route('shedule.show')}}" class="form-sample" method="get" name="mtk"> --}}
-                <div class="input-group input-group-sm mb-3">
+          <div class="form-group">
+            <form action="{{ route('microtik.log')}}" class="form-sample" method="get" name="mtk">
+              <div class="d-flex align-items-center">
+                <div class="mr-3">
+                  <div class="input-group input-group-sm">
                     <div class="input-group-prepend">
-                      <label class="input-group-text" for="inputGroupSelect01">Select Server</label>
+                      <span class="input-group-text" id="server-select-label">Select Server</span>
                     </div>
-                    <form action="{{ route('microtik.log')}}" class="form-sample" method="get" name="mtk">
-                    <select name="sserver" onchange="this.form.submit()" class="custom-select" id="server-select">
-                          <option value=""></option>
-                          @foreach ($servers as $server)
-                          <option value="{{ $server->id }}" {{ $seletedserver == $server->id ? 'selected' : '' }}>
-                              {{ $server->name }}
-                          </option>
-                            @endforeach
+                    <select name="sserver" onchange="this.form.submit()" class="custom-select" id="server-select" aria-describedby="server-select-label">
+                      <option value=""></option>
+                      @foreach ($servers as $server)
+                        <option value="{{ $server->id }}" {{ $seletedserver == $server->id ? 'selected' : '' }}>
+                          {{ $server->name }}
+                        </option>
+                      @endforeach
                     </select>
-                </form>
-                    <div class="input-group-append">
-                        <div class="input-group-text">
-                            <span for="auto-refresh">Auto-refresh&nbsp;&nbsp;</span>
-                            <input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()">
-                        </div>                            
-                    </div>
                   </div>
-              {{-- </form> --}}
+                </div>
+                <div class="form-check mb-0">
+                  <input class="form-check-input" type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()">
+                  <label class="form-check-label" for="auto-refresh">Auto-refresh</label>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -87,45 +87,148 @@
 
 @push('page-js')
 
-@if($seletedserver){
+@if($seletedserver)
 <script>
     $(document).ready(function() {
-        var autoRefresh = false;
+        var source = null;
         var table = $('#logs-table').DataTable({
             processing: true,
-            serverSide: true,
-            ajax: "{{ $urll }}",
-            type: "GET",
+            ajax: {
+                url: "{{ route('microtik.log') }}",
+                type: 'GET',
+                data: function(d) {
+                    d.sserver = "{{ $seletedserver }}";
+                },
+                dataSrc: 'data'
+            },
             columns: [
-                {data: 'time1',name: 'time1', orderable: false, searchable: false},
-                {data: 'topics1',name: 'topics1',orderable: false, searchable: false},
-                {data: 'message', name: 'message', className: 'dt-center', orderable: false},
+                {
+                    data: null,
+                    name: 'time1',
+                    orderable: true,
+                    searchable: false,
+                    className: 'dt-left',
+                    render: function(data) {
+                        return data.time1 || data.time || '';
+                    }
+                },
+                {
+                    data: null,
+                    name: 'topics1',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return data.topics1 || data.topics || '';
+                    }
+                },
+                {data: 'message', name: 'message', className: 'dt-left', orderable: false},
             ],
+            order: [[0, 'desc']],
             rowCallback: function(row, data){
-                if (data.topics1.includes('error')) {
+                var topics = data.topics1 || data.topics || '';
+                if (topics.includes('error')) {
                     $(row).addClass('text-danger');
                 }
             },
-            aaSorting: [],
             pageLength: 25
+        });
+
+        var loginUrl = "{{ route('microtik.log.login') }}";
+        var logoutUrl = "{{ route('microtik.log.logout') }}";
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        window.toggleAutoRefresh = function() {
+            if ($('#auto-refresh').is(':checked')) {
+                loginAndStart();
+            } else {
+                logoutAndStop();
+            }
+        };
+
+        var refreshTimer = null;
+
+        function loginAndStart() {
+            var selectedServer = $('#server-select').val();
+            if (!selectedServer) {
+                alert('Please select a server before enabling auto-refresh.');
+                $('#auto-refresh').prop('checked', false);
+                return;
+            }
+
+            fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ sserver: selectedServer })
+            }).then(function(response) {
+                return response.json().then(function(data) {
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'MikroTik login failed');
+                    }
+                    startAutoRefresh();
+                });
+            }).catch(function(err) {
+                console.error('MikroTik login failed:', err);
+                alert('Auto-refresh login failed: ' + err.message);
+                $('#auto-refresh').prop('checked', false);
+            });
+        }
+
+        function logoutAndStop() {
+            stopAutoRefresh();
+            fetch(logoutUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({})
+            }).then(function(response) {
+                return response.json();
+            }).then(function(data) {
+                if (!data.success) {
+                    console.warn('MikroTik logout failed:', data);
+                }
+            }).catch(function(err) {
+                console.error('MikroTik logout failed:', err);
+            });
+        }
+
+        function startAutoRefresh() {
+            if (refreshTimer !== null) {
+                return;
+            }
+
+            console.info('Starting auto-refresh polling');
+            table.ajax.reload(null, false);
+            refreshTimer = setInterval(function() {
+                table.ajax.reload(null, false);
+            }, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshTimer !== null) {
+                console.info('Stopping auto-refresh polling');
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+            }
+        }
+
+        window.addEventListener('beforeunload', stopAutoRefresh);
+
+        $('#auto-refresh').on('change', function() {
+            if ($(this).is(':checked')) {
+                startAutoRefresh();
+            } else {
+                stopAutoRefresh();
+            }
         });
     });
 
-    function toggleAutoRefresh() {
-        var autoRefresh = !autoRefresh;
-        if (autoRefresh) {
-            $('#logs-table').DataTable().ajax.reload();
-            setInterval(toggleAutoRefresh, 5000);
-        } else {
-            clearInterval(setInterval);
-        }
-    }
-
-    $('#auto-refresh').click(function() {
-        toggleAutoRefresh();
-    });
-
 </script>
-}
 @endif
 @endpush

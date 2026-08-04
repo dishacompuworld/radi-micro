@@ -1,0 +1,149 @@
+﻿ 600 [ 2]         $seletedserver = $request->query('sserver');
+ 601 [ 2]         $serveriid = Server::find($seletedserver);
+ 602 [ 2]         // Log::info('Server ID: ' . $serveriid);
+ 603 [ 3]         if ($serveriid) {
+ 604 [ 3]             // $serveriid = Server::find($seletedserver);
+ 605 [ 3] 
+ 606 [ 4]             if (!$serveriid) {
+ 607 [ 4]                 return response()->json(['error' => 'Selected server not found'], 404);
+ 608 [ 3]             }
+ 609 [ 3] 
+ 610 [ 4]             if($request->ajax()){
+ 611 [ 4]                 // Log::info('Entered Ajax');
+ 612 [ 4]                 $logs=[];
+ 613 [ 4]     
+ 614 [ 5]                 if($serveriid){
+ 615 [ 5]     
+ 616 [ 5]                     $ip = $serveriid->mip;
+ 617 [ 5]                     $user = $serveriid->username;
+ 618 [ 5]                     $password = $serveriid->password;
+ 619 [ 5]     
+ 620 [ 5]                     // Primary: attempt legacy socket adapter first (more reliable historically)
+ 621 [ 5]                     $rawLogs = [];
+ 622 [ 5]                     $rawSource = 'none';
+ 623 [ 5] 
+ 624 [ 6]                     try {
+ 625 [ 6]                         $legacy = new LegacyRouterosAPI();
+ 626 [ 6]                         $legacy->debug = false;
+ 627 [ 7]                         if ($legacy->connect($ip, $user, $password)) {
+ 628 [ 7]                             Log::info('NewMicrotikController: fetched logs using legacy adapter');
+ 629 [ 7]                             $rawLogs = $legacy->comm('/log/print');
+ 630 [ 7]                             Log::info('NewMicrotikController legacy raw type: ' . gettype($rawLogs) . ' count: ' . (is_array($rawLogs) ? count($rawLogs) : 0));
+ 631 [ 7]                             Log::info('NewMicrotikController legacy sample: ' . json_encode(is_array($rawLogs) ? array_slice($rawLogs, 0, 5) : $rawLogs));
+ 632 [ 7]                             $legacy->disconnect();
+ 633 [ 7]                             $rawSource = 'legacy';
+ 634 [ 6]                         }
+ 635 [ 6]                     } catch (\Throwable $e) {
+ 636 [ 6]                         Log::warning('NewMicrotikController legacy primary attempt failed: ' . $e->getMessage());
+ 637 [ 6]                         $rawLogs = [];
+ 638 [ 5]                     }
+ 639 [ 5] 
+ 640 [ 5]                     // If legacy returned nothing, try the new client as a fallback
+ 641 [ 5]                     $alternate = null;
+ 642 [ 6]                     if (empty($rawLogs)) {
+ 643 [ 6]                         $API = new RouterosAPI();
+ 644 [ 6]                         $API->debug = false;
+ 645 [ 7]                         if ($API->connect($ip, $user, $password)) {
+ 646 [ 7]                             Log::info("NewMicrotikController: connected to {$ip} (new client fallback)");
+ 647 [ 7]                             $rawLogs = $API->comm('/log/print');
+ 648 [ 7]                             Log::info('NewMicrotikController viewLog raw type: ' . gettype($rawLogs) . ' count: ' . (is_array($rawLogs) ? count($rawLogs) : 0));
+ 649 [ 7]                             Log::info('NewMicrotikController viewLog raw sample: ' . json_encode(is_array($rawLogs) ? array_slice($rawLogs, 0, 5) : $rawLogs));
+ 650 [ 7]                             $rawLogs = is_array($rawLogs) ? array_reverse($rawLogs) : [];
+ 651 [ 7] 
+ 652 [ 8]                             if (empty($rawLogs)) {
+ 653 [ 9]                                 try {
+ 654 [ 9]                                     $alternate = $API->comm('/log/print', ['.proplist' => 'time,topics,message', 'limit' => 20]);
+ 655 [ 9]                                     Log::info('NewMicrotikController viewLog alternate raw type: ' . gettype($alternate) . ' count: ' . (is_array($alternate) ? count($alternate) : 0));
+ 656 [ 9]                                     Log::info('NewMicrotikController viewLog alternate sample: ' . json_encode(is_array($alternate) ? array_slice($alternate, 0, 5) : $alternate));
+ 657 [ 9]                                     $alternate = is_array($alternate) ? array_reverse($alternate) : [];
+ 658 [ 9]                                 } catch (\Throwable $e) {
+ 659 [ 9]                                     Log::warning('NewMicrotikController alternate log fetch failed: ' . $e->getMessage());
+ 660 [ 9]                                     $alternate = null;
+ 661 [ 8]                                 }
+ 662 [ 7]                             }
+ 663 [ 7] 
+ 664 [ 7]                             $API->disconnect();
+ 665 [ 7]                             $rawSource = 'new';
+ 666 [ 6]                         }
+ 667 [ 5]                     }
+ 668 [ 5] 
+ 669 [ 5]                         $normalized = [];
+ 670 [ 6]                         foreach ($rawLogs as $item) {
+ 671 [ 6]                             if (!is_array($item)) continue;
+ 672 [ 6] 
+ 673 [ 7]                             if (isset($item['message'])) {
+ 674 [ 7]                                 $message = $item['message'];
+ 675 [ 7]                             } elseif (isset($item['msg'])) {
+ 676 [ 7]                                 $message = $item['msg'];
+ 677 [ 7]                             } elseif (isset($item['log'])) {
+ 678 [ 7]                                 $message = $item['log'];
+ 679 [ 7]                             } else {
+ 680 [ 7]                                 $message = '';
+ 681 [ 6]                             }
+ 682 [ 6] 
+ 683 [ 7]                             if (isset($item['topics'])) {
+ 684 [ 7]                                 $topics = $item['topics'];
+ 685 [ 8]                                 if (is_array($topics)) {
+ 686 [ 8]                                     $topics = implode(', ', $topics);
+ 687 [ 7]                                 }
+ 688 [ 7]                             } elseif (isset($item['topic'])) {
+ 689 [ 7]                                 $topics = $item['topic'];
+ 690 [ 7]                             } else {
+ 691 [ 7]                                 $topics = '';
+ 692 [ 6]                             }
+ 693 [ 6] 
+ 694 [ 7]                             if (isset($item['time'])) {
+ 695 [ 7]                                 $time = $item['time'];
+ 696 [ 7]                             } elseif (isset($item['timestamp'])) {
+ 697 [ 7]                                 $ts = $item['timestamp'];
+ 698 [ 8]                                 if (is_numeric($ts)) {
+ 699 [ 8]                                     $time = date('Y-m-d H:i:s', (int)$ts);
+ 700 [ 8]                                 } else {
+ 701 [ 8]                                     $time = $ts;
+ 702 [ 7]                                 }
+ 703 [ 7]                             } else {
+ 704 [ 7]                                 $time = '';
+ 705 [ 6]                             }
+ 706 [ 6] 
+ 707 [ 7]                             if (preg_match('/system.*info.*account/i', $topics)) {
+ 708 [ 7]                                 continue;
+ 709 [ 6]                             }
+ 710 [ 6] 
+ 711 [ 6]                             $normalized[] = array_merge($item, [
+ 712 [ 6]                                 'message' => $message,
+ 713 [ 6]                                 'topics' => $topics,
+ 714 [ 6]                                 'time' => $time,
+ 715 [ 6]                             ]);
+ 716 [ 5]                         }
+ 717 [ 5] 
+ 718 [ 5]                         Log::info('NewMicrotikController viewLog normalized count: ' . count($normalized));
+ 719 [ 5] 
+ 720 [ 5]                         // If debug_raw param present, return raw, alternate and normalized JSON for easier troubleshooting
+ 721 [ 6]                         if ($request->query('debug_raw')) {
+ 722 [ 6]                             $API->disconnect();
+ 723 [ 6]                             return response()->json(['raw' => $rawLogs, 'alternate' => $alternate, 'normalized' => $normalized]);
+ 724 [ 5]                         }
+ 725 [ 5] 
+ 726 [ 5]                         $response = DataTables::of($normalized)
+ 727 [ 5]                                 ->addIndexColumn()
+ 728 [ 6]                                 ->addColumn('time1', function ($data) {
+ 729 [ 6]                                     return $data['time'] ?? '';
+ 730 [ 5]                                 })
+ 731 [ 6]                                 ->addColumn('topics1', function ($data) {
+ 732 [ 6]                                     return $data['topics'] ?? '';
+ 733 [ 5]                                 })
+ 734 [ 5]                                 ->rawColumns(['time1','topics1'])
+ 735 [ 5]                                 ->make(true);
+ 736 [ 5] 
+ 737 [ 5]                         $API->disconnect();
+ 738 [ 5]                         return $response;
+ 739 [ 4]                     }
+ 740 [ 3]                 }
+ 741 [ 3]     
+ 742 [ 2]             }
+ 743 [ 2] 
+ 744 [ 1]         }
+ 745 [ 1] 
+ 746 [ 1]         return view('microtik.log', compact('title', 'seletedserver','servers'));
+ 747 [ 1] 
+ 748 [ 1]     public function getSystemHealth(Request $request)

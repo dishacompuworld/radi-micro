@@ -202,17 +202,19 @@
                       <div class="dropdown-divider"></div>
                     </li>
                     <li>
-                      <a class="dropdown-item" href="#">
+                      <a class="dropdown-item" href="{{ route('profile.edit')}}">
                         <i class="bx bx-user me-2"></i>
                         <span class="align-middle">My Profile</span>
                       </a>
                     </li>
+                    @can('view-settings')
                     <li>
-                      <a class="dropdown-item" href="#">
+                      <a class="dropdown-item" href="{{ route('settings')}}">
                         <i class="bx bx-cog me-2"></i>
                         <span class="align-middle">Settings</span>
                       </a>
                     </li>
+                    @endcan
                     <li>
                       <a class="dropdown-item" href="#">
                         <span class="d-flex align-items-center align-middle">

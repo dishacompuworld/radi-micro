@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function () {
 
 
 Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
+Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscriberChartDataAjax'])->name('dashboard.subscriber.chart');
     Route::get('',[DashboardController::class,'Index']);
 
     // Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -68,6 +69,9 @@ Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
     Route::get('showservices', [NewMicrotikController::class, 'showServices'])->name('show.services');
     Route::get('logs', [NewMicrotikController::class, 'viewLogs'])->name('microtik.logs');
     Route::get('log', [NewMicrotikController::class, 'viewLog'])->name('microtik.log');
+    Route::post('log/login', [NewMicrotikController::class, 'microtikLogin'])->name('microtik.log.login');
+    Route::post('log/logout', [NewMicrotikController::class, 'microtikLogout'])->name('microtik.log.logout');
+    Route::get('log/stream', [NewMicrotikController::class, 'streamLog'])->name('microtik.log.stream');
     Route::get('systemhistory', [NewMicrotikController::class, 'getSystemHistory'])->name('system.history');
     Route::get('viewCommand', [NewMicrotikController::class, 'viewCommand'])->name('view.command');
     Route::get('traffic-chart/{serverId}/{username}', [NewMicrotikController::class, 'showTrafficChart'])->name('traffic.chart');

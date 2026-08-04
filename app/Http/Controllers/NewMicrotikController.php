@@ -8,6 +8,9 @@ use RouterOS\Config;
 use RouterOS\Query;
 use Illuminate\Support\Facades\Session;
 use App\Models\Server;
+use App\Models\RouterosAPI as LegacyRouterosAPI;
+use App\Services\RouterosClientAdapter as RouterosAPI;
+use App\Support\RouterosServiceStatus;
 use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\DataTables;
 
@@ -96,6 +99,139 @@ class NewMicrotikController extends Controller
         }
     }
 
+    private function normalizeLogItems(array $rawLogs): array
+    {
+        $normalized = [];
+
+        foreach ($rawLogs as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            if (isset($item['message'])) {
+                $message = $item['message'];
+            } elseif (isset($item['msg'])) {
+                $message = $item['msg'];
+            } elseif (isset($item['log'])) {
+                $message = $item['log'];
+            } else {
+                $message = '';
+            }
+
+            if (isset($item['topics'])) {
+                $topics = $item['topics'];
+                if (is_array($topics)) {
+                    $topics = implode(', ', $topics);
+                }
+            } elseif (isset($item['topic'])) {
+                $topics = $item['topic'];
+            } else {
+                $topics = '';
+            }
+
+            if (isset($item['time'])) {
+                $time = $item['time'];
+            } elseif (isset($item['timestamp'])) {
+                $ts = $item['timestamp'];
+                if (is_numeric($ts)) {
+                    $time = date('Y-m-d H:i:s', (int)$ts);
+                } else {
+                    $time = $ts;
+                }
+            } else {
+                $time = '';
+            }
+
+            if (preg_match('/system.*info.*account/i', $topics)) {
+                continue;
+            }
+
+            $normalized[] = array_merge($item, [
+                'message' => $message,
+                'topics' => $topics,
+                'time' => $time,
+            ]);
+        }
+
+        return $normalized;
+    }
+
+    public function streamLog(Request $request)
+    {
+        $serverId = $request->query('sserver');
+        $server = Server::find($serverId);
+
+        if (!$server) {
+            return response()->json(['error' => 'Selected server not found'], 404);
+        }
+
+        return response()->stream(function () use ($server) {
+            try {
+                Log::info('NewMicrotikController streamLog started', ['server_id' => $server->id]);
+
+                ignore_user_abort(true);
+                set_time_limit(0);
+                session_write_close();
+
+                if (function_exists('apache_setenv')) {
+                    @apache_setenv('no-gzip', '1');
+                }
+                @ini_set('zlib.output_compression', '0');
+                @ini_set('output_buffering', 'off');
+                @ini_set('implicit_flush', '1');
+                while (ob_get_level() > 0) {
+                    @ob_end_flush();
+                }
+                ob_implicit_flush(true);
+                echo str_repeat(' ', 4096);
+                @flush();
+
+                $legacy = new LegacyRouterosAPI();
+                $legacy->debug = false;
+
+                if (!$legacy->connect($server->mip, $server->username, $server->password)) {
+                    echo json_encode(['type' => 'error', 'message' => 'Unable to login to MikroTik']) . "\n";
+                    @flush();
+                    return;
+                }
+
+                echo json_encode(['type' => 'status', 'status' => 'logged_in']) . "\n";
+                @flush();
+
+                while (!connection_aborted()) {
+                    try {
+                        $rawLogs = $legacy->comm('/log/print');
+                        $normalized = $this->normalizeLogItems(is_array($rawLogs) ? array_reverse($rawLogs) : []);
+                        echo json_encode(['type' => 'logs', 'logs' => $normalized]) . "\n";
+                        @flush();
+                    } catch (\Throwable $e) {
+                        echo json_encode(['type' => 'error', 'message' => $e->getMessage()]) . "\n";
+                        @flush();
+                    }
+
+                    sleep(5);
+                }
+
+                try {
+                    $legacy->disconnect();
+                    echo json_encode(['type' => 'status', 'status' => 'logged_out']) . "\n";
+                    @flush();
+                } catch (\Throwable $e) {
+                    Log::warning('Error disconnecting MikroTik stream: ' . $e->getMessage());
+                }
+            } catch (\Throwable $e) {
+                Log::error('NewMicrotikController streamLog failure', ['server_id' => $server->id, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                echo json_encode(['type' => 'error', 'message' => 'Stream failed: ' . $e->getMessage()]) . "\n";
+                @flush();
+            }
+        }, 200, [
+            'Content-Type' => 'text/plain; charset=utf-8',
+            'Cache-Control' => 'no-cache, no-transform',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
     public function shedule(Request $request){
 
         $title = "Sheduler";
@@ -162,7 +298,7 @@ class NewMicrotikController extends Controller
 
                 // return $shedules;
 
-                return view('admin.microtik.shedule', compact('title','servers','shedules','seletedserver'));
+                return view('microtik.shedule', compact('title','servers','shedules','seletedserver'));
             }
         }
 
@@ -277,7 +413,6 @@ class NewMicrotikController extends Controller
                 Session::put('mikrotik_user', $user);
                 Session::put('mikrotik_password', $password);
                 Session::put('isLoggedIn', true);
-                // Log::info('MikroTik login successful', ['ip' => $ip, 'user' => $user]);
                 return response()->json(['success' => true]);
             } else {
                 Log::error('MikroTik login failed', ['ip' => $ip, 'user' => $user]);
@@ -287,6 +422,48 @@ class NewMicrotikController extends Controller
             Log::error('Exception during MikroTik login', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Internal Server Error'], 500);
         }
+    }
+
+    public function microtikLogin(Request $request)
+    {
+        $serverId = $request->input('sserver');
+        if (!$serverId) {
+            return response()->json(['success' => false, 'message' => 'Server selection required'], 400);
+        }
+
+        $server = Server::find($serverId);
+        if (!$server) {
+            return response()->json(['success' => false, 'message' => 'Selected server not found'], 404);
+        }
+
+        try {
+            $ip = $server->mip;
+            $user = $server->username;
+            $password = $server->password;
+
+            $API = new RouterosAPI();
+            if ($API->connect($ip, $user, $password)) {
+                $API->disconnect();
+                Session::put('mikrotik_ip', $ip);
+                Session::put('mikrotik_user', $user);
+                Session::put('mikrotik_password', $password);
+                Session::put('mikrotik_server_id', $serverId);
+                Session::put('isLoggedIn', true);
+                return response()->json(['success' => true]);
+            }
+
+            Log::error('MikroTik login failed', ['server_id' => $serverId, 'ip' => $ip, 'user' => $user]);
+            return response()->json(['success' => false, 'message' => 'Unable to connect to MikroTik'], 401);
+        } catch (\Exception $e) {
+            Log::error('Exception during MikroTik login', ['error' => $e->getMessage(), 'server_id' => $serverId]);
+            return response()->json(['success' => false, 'message' => 'Internal Server Error'], 500);
+        }
+    }
+
+    public function microtikLogout(Request $request)
+    {
+        Session::forget(['mikrotik_ip', 'mikrotik_user', 'mikrotik_password', 'mikrotik_server_id', 'isLoggedIn']);
+        return response()->json(['success' => true]);
     }
 
     public function getRealTimeTraffic(Request $request)
@@ -604,8 +781,8 @@ class NewMicrotikController extends Controller
                 return response()->json(['error' => 'Selected server not found'], 404);
             }
 
-            if($request->ajax()){
-                // Log::info('Entered Ajax');
+            if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                // Log::info('Entered Ajax/JSON request');
                 $logs=[];
     
                 if($serveriid){
@@ -614,40 +791,138 @@ class NewMicrotikController extends Controller
                     $user = $serveriid->username;
                     $password = $serveriid->password;
     
-                    $API = new RouterosAPI();
-                    $API->debug = false;
-    
-                    if ($API->connect($ip, $user, $password)) {
-    
-                        // Log the username to MikroTik
-                        $logs = $API->comm('/log/print');
-                        $logs = array_reverse($logs);
+                    // Primary: attempt legacy socket adapter first (more reliable historically)
+                    $rawLogs = [];
+                    $rawSource = 'none';
 
-                        $logs = array_filter($logs, function ($log) {
-                            return !preg_match('/system.*info.*account/i', $log['topics']);
-                        });
-                        return DataTables::of($logs)
+                    try {
+                        $legacy = new LegacyRouterosAPI();
+                        $legacy->debug = false;
+                        if ($legacy->connect($ip, $user, $password)) {
+                            Log::info('NewMicrotikController: fetched logs using legacy adapter');
+                            $rawLogs = $legacy->comm('/log/print');
+                            Log::info('NewMicrotikController legacy raw type: ' . gettype($rawLogs) . ' count: ' . (is_array($rawLogs) ? count($rawLogs) : 0));
+                            Log::info('NewMicrotikController legacy sample: ' . json_encode(is_array($rawLogs) ? array_slice($rawLogs, 0, 5) : $rawLogs));
+                            $legacy->disconnect();
+                            $rawSource = 'legacy';
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('NewMicrotikController legacy primary attempt failed: ' . $e->getMessage());
+                        $rawLogs = [];
+                    }
+
+                    // If legacy returned nothing, try the new client as a fallback
+                    $alternate = null;
+                    $API = null;
+                    if (empty($rawLogs)) {
+                        $API = new RouterosAPI();
+                        $API->debug = false;
+                        if ($API->connect($ip, $user, $password)) {
+                            Log::info("NewMicrotikController: connected to {$ip} (new client fallback)");
+                            $rawLogs = $API->comm('/log/print');
+                            Log::info('NewMicrotikController viewLog raw type: ' . gettype($rawLogs) . ' count: ' . (is_array($rawLogs) ? count($rawLogs) : 0));
+                            Log::info('NewMicrotikController viewLog raw sample: ' . json_encode(is_array($rawLogs) ? array_slice($rawLogs, 0, 5) : $rawLogs));
+                            $rawLogs = is_array($rawLogs) ? array_reverse($rawLogs) : [];
+
+                            if (empty($rawLogs)) {
+                                try {
+                                    $alternate = $API->comm('/log/print', ['.proplist' => 'time,topics,message', 'limit' => 20]);
+                                    Log::info('NewMicrotikController viewLog alternate raw type: ' . gettype($alternate) . ' count: ' . (is_array($alternate) ? count($alternate) : 0));
+                                    Log::info('NewMicrotikController viewLog alternate sample: ' . json_encode(is_array($alternate) ? array_slice($alternate, 0, 5) : $alternate));
+                                    $alternate = is_array($alternate) ? array_reverse($alternate) : [];
+                                } catch (\Throwable $e) {
+                                    Log::warning('NewMicrotikController alternate log fetch failed: ' . $e->getMessage());
+                                    $alternate = null;
+                                }
+                            }
+
+                            $API->disconnect();
+                            $rawSource = 'new';
+                        }
+                    }
+
+                        $normalized = [];
+                        foreach ($rawLogs as $item) {
+                            if (!is_array($item)) continue;
+
+                            if (isset($item['message'])) {
+                                $message = $item['message'];
+                            } elseif (isset($item['msg'])) {
+                                $message = $item['msg'];
+                            } elseif (isset($item['log'])) {
+                                $message = $item['log'];
+                            } else {
+                                $message = '';
+                            }
+
+                            if (isset($item['topics'])) {
+                                $topics = $item['topics'];
+                                if (is_array($topics)) {
+                                    $topics = implode(', ', $topics);
+                                }
+                            } elseif (isset($item['topic'])) {
+                                $topics = $item['topic'];
+                            } else {
+                                $topics = '';
+                            }
+
+                            if (isset($item['time'])) {
+                                $time = $item['time'];
+                            } elseif (isset($item['timestamp'])) {
+                                $ts = $item['timestamp'];
+                                if (is_numeric($ts)) {
+                                    $time = date('Y-m-d H:i:s', (int)$ts);
+                                } else {
+                                    $time = $ts;
+                                }
+                            } else {
+                                $time = '';
+                            }
+
+                            if (preg_match('/system.*info.*account/i', $topics)) {
+                                continue;
+                            }
+
+                            $normalized[] = array_merge($item, [
+                                'message' => $message,
+                                'topics' => $topics,
+                                'time' => $time,
+                            ]);
+                        }
+
+                        Log::info('NewMicrotikController viewLog normalized count: ' . count($normalized));
+
+                        $normalized = array_reverse($normalized);
+
+                        // If debug_raw param present, return raw, alternate and normalized JSON for easier troubleshooting
+                        if ($request->query('debug_raw')) {
+                            if ($API !== null) {
+                                $API->disconnect();
+                            }
+                            return response()->json(['raw' => $rawLogs, 'alternate' => $alternate, 'normalized' => $normalized]);
+                        }
+
+                        $response = DataTables::of($normalized)
                                 ->addIndexColumn()
-                                ->addColumn('time1',function ($data){
-                                    $time = $data['time'];
-                                    return $time;
+                                ->addColumn('time1', function ($data) {
+                                    return $data['time'] ?? '';
                                 })
-                                ->addColumn('topics1',function ($data){
-                                    $topics = $data['topics'];
-                                    return $topics;
+                                ->addColumn('topics1', function ($data) {
+                                    return $data['topics'] ?? '';
                                 })
-                            
                                 ->rawColumns(['time1','topics1'])
                                 ->make(true);
-    
-                        $API->disconnect(); 
+
+                        if ($API !== null) {
+                            $API->disconnect();
                         }
+                        return $response;
+                    }
                 }
     
             }
 
-        }
-
+        
         return view('microtik.log', compact('title', 'seletedserver','servers'));
     }
 
@@ -937,59 +1212,13 @@ class NewMicrotikController extends Controller
             }
 
             $response3 = $API->comm('/ip/service/print');
-            $telnet = array_filter($response3, function ($item) {
-                return $item['name'] === 'telnet';
-            });
-            // Log::info('Ip Services : '. json_encode($response3));
-            // Log::info('Telnet: '. json_encode($telnet));
-            if (isset($telnet[0]['disabled']) && $telnet[0]['disabled'] === 'false') {
-                $telnetStatus = 'enabled';
-            }
-            // Log::info('Status of Telnet: '. $telnet[0]['disabled']);
+            $services = is_array($response3) ? $response3 : [];
 
-            // $response2 = $API->comm('/ip/service/print');
-            $wwwssl = array_filter($response3, function ($item) {
-                return $item['name'] === 'www-ssl';
-            });
-            // Log::info('Ip Services : '. json_encode($response3));
-            // Log::info('wwwssl: '. json_encode($wwwssl));
-            if (isset($wwwssl['4']['disabled']) && $wwwssl['4']['disabled'] === 'false') {
-                $wwwsslStatus = 'enabled';
-            }
-            // Log::info('Status of wwwssl: '. $wwwssl[4]['disabled']);
-
-            // $response4 = $API->comm('/ip/service/print');
-            $www = array_filter($response3, function ($item) {
-                return $item['name'] === 'www';
-            });
-            // Log::info('Ip Services : '. json_?encode($response3));
-            // Log::info('wwwssl: '. json_encode($wwwssl));
-            if (isset($www['2']['disabled']) && $www['2']['disabled'] === 'false') {
-                $wwwStatus = 'enabled';
-            }
-            // Log::info('Status of wwwssl: '. $wwwssl[4]['disabled']);
-
-            // $response5 = $API->comm('/ip/service/print');
-            $ssh = array_filter($response3, function ($item) {
-                return $item['name'] === 'ssh';
-            });
-            // Log::info('Ip Services : '. json_encode($response3));
-            // Log::info('wwwssl: '. json_encode($wwwssl));
-            if (isset($ssh['3']['disabled']) && $ssh['3']['disabled'] === 'false') {
-                $sshStatus = 'enabled';
-            }
-            // Log::info('Status of wwwssl: '. $wwwssl[4]['disabled']);
-
-            // $response6 = $API->comm('/ip/service/print');
-            $winbox = array_filter($response3, function ($item) {
-                return $item['name'] === 'winbox';
-            });
-            // Log::info('Ip Services : '. json_encode($response6));
-            // Log::info('wwwssl: '. json_encode($wwwssl));
-            if (isset($winbox['6']['disabled']) && $winbox['6']['disabled'] === 'false') {
-                $winboxStatus = 'enabled';
-            }
-            // Log::info('Status of wwwssl: '. $wwwssl[4]['disabled']);
+            $telnetStatus = RouterosServiceStatus::getServiceStatus($services, 'telnet');
+            $wwwsslStatus = RouterosServiceStatus::getServiceStatus($services, 'www-ssl');
+            $wwwStatus = RouterosServiceStatus::getServiceStatus($services, 'www');
+            $sshStatus = RouterosServiceStatus::getServiceStatus($services, 'ssh');
+            $winboxStatus = RouterosServiceStatus::getServiceStatus($services, 'winbox');
         }
         // Log::info('Pptp Status: '. $pptpStatus);
         return ['pptpStatus' => $pptpStatus, 'l2tpStatus' => $l2tpStatus, 'telnetStatus' => $telnetStatus, 'wwwsslStatus' => $wwwsslStatus, 'sshStatus' => $sshStatus, 'wwwStatus' => $wwwStatus, 'winboxStatus' => $winboxStatus];
@@ -1000,7 +1229,7 @@ class NewMicrotikController extends Controller
     {
         // $servers = Server::where('enable', '1')->get();
         $seletedserver = $request->input('sserver');
-        $pptpEnabled = $request->input('pptp_enabled');
+        $pptpEnabled = RouterosServiceStatus::isEnabled($request->input('pptp_enabled'));
         $serveriid = Server::find($seletedserver);
         $seletedserver = $seletedserver ?? '';
 
@@ -1010,25 +1239,24 @@ class NewMicrotikController extends Controller
             $user = $serveriid->username;
             $password = $serveriid->password;
 
-            $API = new RouterosAPI();
+            $API = new LegacyRouterosAPI();
             $API->debug = false;
             if ($API->connect($ip, $user, $password)) {
-            // $routerosAPI = new RouterosAPI($ip, $user, $password);
-                
-                if ($pptpEnabled == 'true') {
-                    $API->write('/interface/pptp-server/server/set', false);
-                    $API->write('=enabled=yes');
-                    $API->read();
-                    // Log::info('Pptp enabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('pptp.enable');
+                if ($pptpEnabled) {
+                    $API->comm('/interface/pptp-server/server/set', [
+                        'enabled' => 'yes',
+                    ]);
 
+                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('pptp.enable');
                 } else {
-                    $API->write('/interface/pptp-server/server/set', false);
-                    $API->write('=enabled=no');
-                    $API->read();
-                    // Log::info('Pptp disabled for Selected Server:'. $seletedserver);
+                    $API->comm('/interface/pptp-server/server/set', [
+                        'enabled' => 'no',
+                    ]);
+
                     $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('pptp.disable');
                 }
+
+                $API->disconnect();
                 return $alertMessage;
             }
         }
@@ -1038,7 +1266,7 @@ class NewMicrotikController extends Controller
     {
         // $servers = Server::where('enable', '1')->get();
         $seletedserver = $request->input('sserver');
-        $l2tpEnabled = $request->input('l2tp_enabled');
+        $l2tpEnabled = RouterosServiceStatus::isEnabled($request->input('l2tp_enabled'));
         $serveriid = Server::find($seletedserver);
         $seletedserver = $seletedserver ?? '';
 
@@ -1048,25 +1276,24 @@ class NewMicrotikController extends Controller
             $user = $serveriid->username;
             $password = $serveriid->password;
 
-            $API = new RouterosAPI();
+            $API = new LegacyRouterosAPI();
             $API->debug = false;
             if ($API->connect($ip, $user, $password)) {
-            // $routerosAPI = new RouterosAPI($ip, $user, $password);
-                
-                if ($l2tpEnabled == 'true') {
-                    $API->write('/interface/l2tp-server/server/set', false);
-                    $API->write('=enabled=yes');
-                    $API->read();
-                    // Log::info('Pptp enabled for Selected Server:'. $seletedserver);
-                    $message = 'L2TP service enabled successfully!';
+                if ($l2tpEnabled) {
+                    $API->comm('/interface/l2tp-server/server/set', [
+                        'enabled' => 'yes',
+                    ]);
 
+                    $message = 'L2TP service enabled successfully!';
                 } else {
-                    $API->write('/interface/l2tp-server/server/set', false);
-                    $API->write('=enabled=no');
-                    $API->read();
-                    // Log::info('Pptp disabled for Selected Server:'. $seletedserver);
+                    $API->comm('/interface/l2tp-server/server/set', [
+                        'enabled' => 'no',
+                    ]);
+
                     $message = 'L2TP service disabled successfully!';
                 }
+
+                $API->disconnect();
                 return response()->json(['message' => $message]);
             }
         }
@@ -1076,7 +1303,7 @@ class NewMicrotikController extends Controller
     {
         // $servers = Server::where('enable', '1')->get();
         $seletedserver = $request->input('sserver');
-        $telnetEnabled = $request->input('telnet_enabled');
+        $telnetEnabled = RouterosServiceStatus::isEnabled($request->input('telnet_enabled'));
         $serveriid = Server::find($seletedserver);
         $seletedserver = $seletedserver ?? '';
 
@@ -1086,31 +1313,20 @@ class NewMicrotikController extends Controller
             $user = $serveriid->username;
             $password = $serveriid->password;
 
-            $API = new RouterosAPI();
+            $API = new LegacyRouterosAPI();
             $API->debug = false;
 
-
             if ($API->connect($ip, $user, $password)) {
+                $API->comm('/ip/service/set', [
+                    'numbers' => 'telnet',
+                    'disabled' => $telnetEnabled ? 'no' : 'yes',
+                ]);
 
-                if ($telnetEnabled == 'true') {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=telnet', false);
-                    $API->write('=disabled=no');
-                    $API->read();
-                    // Log::info('Telnet enabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('telnet.enable');
-                    // $message = $alertMessage;
+                $alertMessage = $telnetEnabled
+                    ? app('App\Http\Controllers\AlertMessageController')->get('telnet.enable')
+                    : app('App\Http\Controllers\AlertMessageController')->get('telnet.disable');
 
-                } else {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=telnet', false);
-                    $API->write('=disabled=yes');
-                    $API->read();
-                    // Log::info('Telnet disabled for Selected Server:'. $seletedserver);
-                    // $message = 'Telnet service disabled successfully!';
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('telnet.disable');
-                    // $message = $alertMessage;
-                }
+                $API->disconnect();
                 return $alertMessage;
             }
         }
@@ -1121,7 +1337,7 @@ class NewMicrotikController extends Controller
     {
         // $servers = Server::where('enable', '1')->get();
         $seletedserver = $request->input('sserver');
-        $wwwsslEnabled = $request->input('wwwssl_enabled');
+        $wwwsslEnabled = RouterosServiceStatus::isEnabled($request->input('wwwssl_enabled'));
         $serveriid = Server::find($seletedserver);
         $seletedserver = $seletedserver ?? '';
 
@@ -1130,27 +1346,20 @@ class NewMicrotikController extends Controller
             $user = $serveriid->username;
             $password = $serveriid->password;
 
-            $API = new RouterosAPI();
+            $API = new LegacyRouterosAPI();
             $API->debug = false;
 
             if ($API->connect($ip, $user, $password)) {
+                $API->comm('/ip/service/set', [
+                    'numbers' => 'www-ssl',
+                    'disabled' => $wwwsslEnabled ? 'no' : 'yes',
+                ]);
 
-                if ($wwwsslEnabled == 'true') {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=www-ssl', false);
-                    $API->write('=disabled=no');
-                    $API->read();
-                    // Log::info('Telnet enabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('wwwssl.enable');
+                $alertMessage = $wwwsslEnabled
+                    ? app('App\Http\Controllers\AlertMessageController')->get('wwwssl.enable')
+                    : app('App\Http\Controllers\AlertMessageController')->get('wwwssl.disable');
 
-                } else {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=www-ssl', false);
-                    $API->write('=disabled=yes');
-                    $API->read();
-                    // Log::info('Telnet disabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('wwwssl.disable');
-                }
+                $API->disconnect();
                 return $alertMessage;
             }
         }
@@ -1161,7 +1370,7 @@ class NewMicrotikController extends Controller
     {
         // $servers = Server::where('enable', '1')->get();
         $seletedserver = $request->input('sserver');
-        $wwwEnabled = $request->input('www_enabled');
+        $wwwEnabled = RouterosServiceStatus::isEnabled($request->input('www_enabled'));
         $serveriid = Server::find($seletedserver);
         $seletedserver = $seletedserver ?? '';
 
@@ -1171,27 +1380,20 @@ class NewMicrotikController extends Controller
             $user = $serveriid->username;
             $password = $serveriid->password;
 
-            $API = new RouterosAPI();
+            $API = new LegacyRouterosAPI();
             $API->debug = false;
 
             if ($API->connect($ip, $user, $password)) {
+                $API->comm('/ip/service/set', [
+                    'numbers' => 'www',
+                    'disabled' => $wwwEnabled ? 'no' : 'yes',
+                ]);
 
-                if ($wwwEnabled == 'true') {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=www', false);
-                    $API->write('=disabled=no');
-                    $API->read();
-                    // Log::info('Telnet enabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('www.enable');
+                $alertMessage = $wwwEnabled
+                    ? app('App\Http\Controllers\AlertMessageController')->get('www.enable')
+                    : app('App\Http\Controllers\AlertMessageController')->get('www.disable');
 
-                } else {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=www', false);
-                    $API->write('=disabled=yes');
-                    $API->read();
-                    // Log::info('Telnet disabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('www.disable');
-                }
+                $API->disconnect();
                 return $alertMessage;
             }
         }
@@ -1202,7 +1404,7 @@ class NewMicrotikController extends Controller
     {
         // $servers = Server::where('enable', '1')->get();
         $seletedserver = $request->input('sserver');
-        $sshEnabled = $request->input('ssh_enabled');
+        $sshEnabled = RouterosServiceStatus::isEnabled($request->input('ssh_enabled'));
         $serveriid = Server::find($seletedserver);
         $seletedserver = $seletedserver ?? '';
 
@@ -1211,28 +1413,20 @@ class NewMicrotikController extends Controller
             $user = $serveriid->username;
             $password = $serveriid->password;
 
-            $API = new RouterosAPI();
+            $API = new LegacyRouterosAPI();
             $API->debug = false;
 
             if ($API->connect($ip, $user, $password)) {
-                // Log::info('Connected to Router IP: '. $ip);
+                $API->comm('/ip/service/set', [
+                    'numbers' => 'ssh',
+                    'disabled' => $sshEnabled ? 'no' : 'yes',
+                ]);
 
-                if ($sshEnabled == 'true') {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=ssh', false);
-                    $API->write('=disabled=no');
-                    $API->read();
-                    // Log::info('Telnet enabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('ssh.enable');
+                $alertMessage = $sshEnabled
+                    ? app('App\Http\Controllers\AlertMessageController')->get('ssh.enable')
+                    : app('App\Http\Controllers\AlertMessageController')->get('ssh.disable');
 
-                } else {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=ssh', false);
-                    $API->write('=disabled=yes');
-                    $API->read();
-                    // Log::info('Telnet disabled for Selected Server:'. $seletedserver);
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('ssh.disable');
-                }
+                $API->disconnect();
                 return $alertMessage;
             }
         }
@@ -1242,7 +1436,7 @@ class NewMicrotikController extends Controller
     {
         // $servers = Server::where('enable', '1')->get();
         $seletedserver = $request->input('sserver');
-        $wwwsslEnabled = $request->input('winbox_enabled');
+        $wwwsslEnabled = RouterosServiceStatus::isEnabled($request->input('winbox_enabled'));
         $serveriid = Server::find($seletedserver);
         $seletedserver = $seletedserver ?? '';
 
@@ -1252,26 +1446,20 @@ class NewMicrotikController extends Controller
             $user = $serveriid->username;
             $password = $serveriid->password;
 
-            $API = new RouterosAPI();
+            $API = new LegacyRouterosAPI();
             $API->debug = false;
 
             if ($API->connect($ip, $user, $password)) {
+                $API->comm('/ip/service/set', [
+                    'numbers' => 'winbox',
+                    'disabled' => $wwwsslEnabled ? 'no' : 'yes',
+                ]);
 
-                if ($wwwsslEnabled == 'true') {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=winbox', false);
-                    $API->write('=disabled=no');
-                    $API->read();
+                $alertMessage = $wwwsslEnabled
+                    ? app('App\Http\Controllers\AlertMessageController')->get('winbox.enable')
+                    : app('App\Http\Controllers\AlertMessageController')->get('winbox.disable');
 
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('winbox.enable');
-                } else {
-                    $API->write('/ip/service/set', false);
-                    $API->write('=numbers=winbox', false);
-                    $API->write('=disabled=yes');
-                    $API->read();
-
-                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('winbox.disable');
-                }
+                $API->disconnect();
                 return $alertMessage;
             }
         }
@@ -1419,119 +1607,3 @@ class NewMicrotikController extends Controller
     }
 }
 
-/**
- * Adapter to provide the legacy RouterosAPI interface backed by evilfreelancer RouterOS\Client.
- * This keeps existing call sites intact while using the external client library.
- */
-class RouterosAPI
-{
-    public bool $debug = false;
-    private ?Client $client = null;
-    private ?string $lastCommand = null;
-    private array $lastParams = [];
-
-    public function connect(string $ip, string $user, string $pass): bool
-    {
-        $config = (new Config())
-            ->set('host', $ip)
-            ->set('user', $user)
-            ->set('pass', $pass)
-            ->set('port', 8728)
-            ->set('timeout', 10)
-            ->set('ssl', false);
-
-        $this->client = new Client($config);
-        return true;
-    }
-
-        public function comm(string $com, array $arr = [])
-    {
-        if (!$this->client) {
-            return [];
-        }
-
-        $q = $this->client->query($com);
-        foreach ($arr as $k => $v) {
-            // normalize parameter names (strip leading = or ?)
-            $key = ltrim((string)$k, "=?");
-            if (method_exists($q, 'equal')) {
-                // if boolean true and empty value expected, send empty string
-                $val = $v === true ? '' : $v;
-                $q->equal($key, $val);
-            }
-        }
-
-        try {
-            return $q->read();
-        } catch (\RouterOS\Exceptions\StreamException $e) {
-            Log::error('RouterOS StreamException in comm: ' . $e->getMessage());
-            return [];
-        } catch (\Throwable $e) {
-            Log::error('RouterOS Exception in comm: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    public function write(string $command, $param2 = true)
-    {
-        // accumulate simple write/param pairs for later read()
-        if ($command) {
-            if ($command[0] === '=') {
-                // param form "=key=value"
-                $parts = explode('=', ltrim($command, '='), 2);
-                if (count($parts) === 2) {
-                    $this->lastParams[$parts[0]] = $parts[1];
-                }
-            } else {
-                $this->lastCommand = $command;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    public function read($parse = true)
-    {
-        if (!$this->client || !$this->lastCommand) {
-            return [];
-        }
-
-        $q = $this->client->query($this->lastCommand);
-        foreach ($this->lastParams as $k => $v) {
-            if (method_exists($q, 'equal')) {
-                $q->equal($k, $v);
-            }
-        }
-
-        try {
-            $result = $q->read();
-        } catch (\RouterOS\Exceptions\StreamException $e) {
-            Log::error('RouterOS StreamException in read: ' . $e->getMessage());
-            $result = [];
-        } catch (\Throwable $e) {
-            Log::error('RouterOS Exception in read: ' . $e->getMessage());
-            $result = [];
-        }
-
-        // reset
-        $this->lastCommand = null;
-        $this->lastParams = [];
-
-        return $result;
-    }
-
-
-    public function parseResponse($response)
-    {
-        // Client->read already returns parsed responses
-        return $response;
-    }
-
-    public function disconnect()
-    {
-        if ($this->client && method_exists($this->client, 'disconnect')) {
-            try { $this->client->disconnect(); } catch (\Throwable $e) { /* ignore */ }
-        }
-        $this->client = null;
-    }
-}
