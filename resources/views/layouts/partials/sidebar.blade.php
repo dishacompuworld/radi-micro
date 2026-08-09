@@ -25,7 +25,7 @@
                 $microtikRoutes = [
                     'server.create', 'server.index', 'stats.index', 'microtik.system.health',
                     'microtik.ip.neighbors', 'pppoe.allactivenew', 'shedule.show', 'microtik.scripts',
-                    'show.services', 'microtik.log', 'system.history', 'view.command'
+                    'show.services', 'microtik.log', 'system.history', 'view.command', 'live.server.traffic','pppoe.newactive'
                 ];
                 $isMicrotikActive = collect($microtikRoutes)->contains(fn($route) => request()->routeIs($route));
             @endphp
@@ -56,6 +56,15 @@
                   </a>
                 </li>
                 @endcan
+
+                @can('view-livetraffice')
+                <li class="menu-item {{ request()->routeIs('live.server.traffic') ? 'active' : '' }}">
+                  <a href="{{ route('live.server.traffic')}}" class="menu-link">
+                    <div data-i18n="Statistics">Live Traffic</div>
+                  </a>
+                </li>
+                @endcan
+
                 @can('view-system-health')
                 <li class="menu-item {{ request()->routeIs('microtik.system.health') ? 'active' : '' }}">
                   <a href="{{ route('microtik.system.health')}}" class="menu-link">

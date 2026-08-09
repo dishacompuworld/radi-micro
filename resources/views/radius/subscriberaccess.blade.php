@@ -14,61 +14,67 @@
     $newurl = url()->current() . '?name=' . $name . '&location=' . $location;
 
 @endphp
-@extends('admin.layouts.datatable')
 
-<x-assets.datatables />
+@extends('layouts.admin')
 
-@push('page-css')
-
-@endpush
-
-@push('page-header')
-<div class="col-sm-7 col-auto">
-	<h3 class="page-title">Subscriber Access Request Logs</h3>
-	<ul class="breadcrumb">
-		<li class="breadcrumb-item"><a href="{{route('dashboard')}}">Dashboard</a></li>
-        <li class="breadcrumb-item active"><a href="{{route('location.show')}}">Locations</a></li>
-		<li class="breadcrumb-item active">Subscriber Access Request Logs</li>
-	</ul>
-</div>
-
-<div class="col-xs-5 col">
-    @can('delete-user-access')
-    <div><a href="javascript:void(0)" class="btn btn-danger float-right mt-2" id="dlt" data-id="{{ $id }}" data-location="{{ $location }}" data-name="{{ $name }}"><i class="bi bi-trash"></i> Delete</a></div>
-    @endcan
-	{{-- <label class="badge badge-success"> {{ $lastchkmsg }}</lable> --}}
-</div>
-@endpush
 
 @section('content')
-<div class="row">
-	<div class="col-sm-12">
-		<div class="card">
-			<div class="card-body">
-				<div class="table-responsive">
-					<table id="subscriber-access-logs" class="datatable table table-striped table-bordered table-hover table-center mb-0">
-						<thead>
-							<tr style="boder:1px solid black;">
-								{{-- <th>User Id</th> --}}
-                                <th>Date</th>
-                                <th>Username</th>
-                                <th>MAC</th>
-                                <th>Reply Type</th>
-                                <th>Reply Message</th>
-							</tr>
-						</thead>
-						<tbody>
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row mb-4">
+        <div class="col-7 d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-3">Subscriber Access Request Logs</h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb breadcrumb-style1">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="breadcrumb-item active"><a href="{{route('location.show')}}">Location</a></li>
+                        <li class="breadcrumb-item active">Subscriber Access Request Logs</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        
+        @can('delete-user-access')
+        <div class="col-5 d-flex justify-content-end align-items-center">
+            @can('delete-user-access')
+            <div><a href="javascript:void(0)" class="btn btn-danger float-right mt-2" id="dlt" data-id="{{ $id }}" data-location="{{ $location }}" data-name="{{ $name }}"><i class="bi bi-trash"></i> Delete</a></div>
+            @endcan
+        </div>
+        @endcan
+    </div>
 
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</div>
-        <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
-	</div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="subscriber-access-logs" class="datatable table table-striped table-bordered table-hover table-center mb-0">
+                            <thead>
+                                <tr style="boder:1px solid black;">
+                                    {{-- <th>User Id</th> --}}
+                                    <th>Date</th>
+                                    <th>Username</th>
+                                    <th>MAC</th>
+                                    <th>Reply Type</th>
+                                    <th>Reply Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-start mt-3">
+                <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
+            </div>
+        </div>
+    </div>
 
 </div>
-
 @endsection
 
 @push('page-js')
@@ -126,3 +132,4 @@
     });
 </script>
 @endpush
+

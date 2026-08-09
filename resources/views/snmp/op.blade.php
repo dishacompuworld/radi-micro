@@ -124,7 +124,9 @@
 				</div>
 			</div>
 		</div>
-        <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
+        <div class="d-flex justify-content-start mt-3">
+            <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
+        </div>
 	</div>
 
 </div>

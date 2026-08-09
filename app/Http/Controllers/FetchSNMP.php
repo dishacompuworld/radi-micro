@@ -740,7 +740,7 @@ class FetchSNMP extends Controller
             return redirect()->route('subscriber.microtik', ['name'=>$username]);
         }
 
-        return view('admin.snmp.assignont', compact('title','username','optdata'));
+        return view('snmp.assignont', compact('title','username','optdata'));
     }
 
     public function getontuptime($oid){

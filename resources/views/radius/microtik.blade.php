@@ -136,425 +136,295 @@
         $opcardBody="background-color: #eafdea;";
     }
 @endphp
-@extends('admin.layouts.header')
 
-<x-assets.datatables />
+@extends('layouts.admin')
 
-@push('page-css')
-
-@endpush
-
-@push('page-header')
-<div class="col-sm-7 col-auto">
-	<h3 class="page-title">Subscriber Details</h3>
-	<ul class="breadcrumb">
-		<li class="breadcrumb-item"><a href="{{route('dashboard')}}">Dashboard</a></li>
-		<li class="breadcrumb-item active">Subscriber Details</li>
-	</ul>
-</div>
-@endpush
 
 @section('content')
-<div id="message-container" style="display: none;" class="col-sm-12"></div>
-<div class="row">
-    <div class="col-sm-12">
-      <div class="card">
-        <div class="card-body">
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
-                @if (session('msg'))
-                <label class="badge badge-success"> {{ session('msg') }}</lable>
-                @endif
+                <h4 class="mb-3">Subscriber Details</h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb breadcrumb-style1">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="breadcrumb-item active">Subscriber Details</li>
+                    </ol>
+                </nav>
             </div>
-		<!-- Subscribers -->
-		{{-- <h6>Location Name : <b>{{ $urll }}</b> {{ $fromd }}</h6> --}}
-            <table class="table-striped">
+        </div>
+    </div>
 
-                @php
-                    // if (array_key_exists('error_status', $response1)){
-                        // $err = $response1['error_status'];
-                    // }else{
-                        $err = 'No Error';
-                    // }
-                @endphp
+    <div id="message-container" class="row" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-success mb-4" role="alert"></div>
+        </div>
+    </div>
+    <div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-body">
+                @if (session('msg'))
+                    <div class="alert alert-success mb-3">{{ session('msg') }}</div>
+                @endif
 
-                    @if ($err=="not_found")
-                        <tr><th colspan="2">User Not Found</th></tr>
-                    @else
-                        @if (isset($response1['data']['id']))
+                <div class="d-flex flex-wrap gap-2 align-items-center py-2">
                         @php
-                            $renewdate = new DateTime($response1['data']['renewed_at']);
-                            $renewdt = $renewdate->format('d M Y, h:i:s A');
-
-                            $expirydate = new DateTime($response1['data']['expires_at']);
-                            $expirydt = $expirydate->format('d M Y, h:i:s A');
-
-                            $now = now();
-
-                            $diff = date_diff($now,$expirydate);
-                            $remainingdays = $diff->format("%R%a days remaining");
-
-                            $diff2 = date_diff($now, $renewdate);
-                            $useddays = $diff2->format("%R%a days used");
-
-                            $lstlogindate = new DateTime($response1['data']['last_login_at']);
-                            $lstlogindt = $lstlogindate->format('d M Y,h:i:s A');
-
-                            // $diff_mins = dateDiff($response1['data']['last_login_at']);
-                            $diff = $now->diff($lstlogindate);
-                            $diff_mins = format_interval($diff);
-
-                            // $downloadtoday = $response1['data']['bytes_uploaded_in_24_hours'] / (1024 * 1024);
-                            $downloadtoday = convertData($response1['data']['bytes_uploaded_in_24_hours']);
-                            // $uploadtoday = $response1['data']['bytes_downloaded_in_24_hours'] / (1024 * 1024);
-                            $uploadtoday = convertData($response1['data']['bytes_downloaded_in_24_hours']);
-                            $totaltoday =  convertData($response1['data']['bytes_uploaded_in_24_hours'] + $response1['data']['bytes_downloaded_in_24_hours']);
-
-                            if($response1['data']['advance_renewal']){
-                                $adv = 'Yes';
-                            }else {
-                                $adv ='No';
-                            }
-
-                            $mbl = $response1['data']['mobile1'];
-
+                            $err = 'No Error';
                         @endphp
-                            {{-- <tr><th>ID</th><td>{{ $response1['data']['id'] }} </td></tr> --}}
 
-                            {{-- <tr><th>SubDomain</th><td>{{ $subdomain }}</td></tr> --}}
+                        @if ($err == 'not_found')
+                            <div class="text-muted">User Not Found</div>
+                        @else
+                            @if (isset($response1['data']['id']))
+                                @php
+                                    $renewdate = new DateTime($response1['data']['renewed_at']);
+                                    $renewdt = $renewdate->format('d M Y, h:i:s A');
 
-                            @foreach ($userlocations as $uLoc)
-                                @if ($uLoc->name == $subdomain)
+                                    $expirydate = new DateTime($response1['data']['expires_at']);
+                                    $expirydt = $expirydate->format('d M Y, h:i:s A');
 
-                                    <tr>
-                                        <td colspan="2">
-                                            @can('reset-mac')
-                                                {{-- <a href="{{ route('reset.mac',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-warning btn-sm">Reset MAC</a> --}}
-                                                <a href="javascript:void(0)" class='btn btn-warning btn-sm' id="resetmac" data-name="{{ $response1['data']['username'] }}" data-id="{{ $response1['data']['id'] }}" data-location="{{ $subdomain }}">Reset MAC</a>
-                                            @endcan
+                                    $now = now();
 
-                                            @can('enable-disable')
-                                                @if ($response1['data']['status']=="disabled")
-                                                    <a href="{{ route('enable.subscriber',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-success btn-sm">Enable</a>
-                                                @else
-                                                    <a href="{{ route('disable.subscriber',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-danger btn-sm">Disable</a>
-                                                @endif
-                                            @endcan
+                                    $diff = date_diff($now, $expirydate);
+                                    $remainingdays = $diff->format("%R%a days remaining");
 
-                                            @can('overright-bandwidth')
-                                                <a href="{{ route('speed.change',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-warning btn-sm">Overright Speed</a>
-                                            @endcan
-                                            <a href="{{ route('subscriber.accessrequest',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-primary btn-sm">Access Request Logs</a>
-                                            @can('assign-optical-power')
-                                                @if($subdomain=="disha")
-                                                    <a href="{{ route('assign.ont',['name'=>$response1['data']['username'], 'oid'=>$doid]) }}" class="btn btn-success btn-sm">Assing/Update ONT</a>
-                                                @endif
-                                            @endcan
-                                            @if($opticalpower!="Ont Not assign")
-                                                {{-- <input type='Button' value='Reboot ONT' data-oid='{{ $doid }}' id='rebootont' class='btn btn-danger btn-sm'> --}}
-                                                <a href="javascript:void(0)" class='btn btn-danger btn-sm' id="rebootont" data-oid="{{ $doid }}">Reboot ONT</a>
-                                                @can('register-ont')
-                                                <a href="javascript:void(0)" class='btn btn-danger btn-sm' id="deregist" data-oid="{{ $doid }}">De-Register</a>
-                                                <a href="javascript:void(0)" class='btn btn-danger btn-sm' id="regist" data-oid="{{ $doid }}">Register</a>    
-                                                @endcan
+                                    $diff2 = date_diff($now, $renewdate);
+                                    $useddays = $diff2->format("%R%a days used");
+
+                                    $lstlogindate = new DateTime($response1['data']['last_login_at']);
+                                    $lstlogindt = $lstlogindate->format('d M Y,h:i:s A');
+
+                                    $diff = $now->diff($lstlogindate);
+                                    $diff_mins = format_interval($diff);
+
+                                    $downloadtoday = convertData($response1['data']['bytes_uploaded_in_24_hours']);
+                                    $uploadtoday = convertData($response1['data']['bytes_downloaded_in_24_hours']);
+                                    $totaltoday = convertData($response1['data']['bytes_uploaded_in_24_hours'] + $response1['data']['bytes_downloaded_in_24_hours']);
+
+                                    $adv = $response1['data']['advance_renewal'] ? 'Yes' : 'No';
+                                    $mbl = $response1['data']['mobile1'];
+                                @endphp
+
+                                @foreach ($userlocations as $uLoc)
+                                    @if ($uLoc->name == $subdomain)
+                                        @can('reset-mac')
+                                            <a href="{{ route('reset.mac', ['name' => $response1['data']['username'], 'id' => $response1['data']['id'], 'location' => $subdomain]) }}"
+                                               class="btn btn-warning px-3 py-2"
+                                               id="resetmac"
+                                               onclick="return confirm('Reset MAC for this subscriber?')">
+                                                Reset MAC
+                                            </a>
+                                        @endcan
+
+                                        @can('enable-disable')
+                                            @if ($response1['data']['status'] == 'disabled')
+                                                <a href="{{ route('enable.subscriber',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-success px-3 py-2">Enable</a>
+                                            @else
+                                                <a href="{{ route('disable.subscriber',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-danger px-3 py-2">Disable</a>
                                             @endif
-                                            
-                                        </td>
-                                    </tr>
-                                @endif
-                            @endforeach
+                                        @endcan
+
+                                        @can('overright-bandwidth')
+                                            <a href="{{ route('speed.change',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-warning px-3 py-2">Override Speed</a>
+                                        @endcan
+
+                                        <a href="{{ route('subscriber.accessrequest',['name'=>$response1['data']['username'], 'id'=>$response1['data']['id'], 'location'=>$subdomain]) }}" class="btn btn-primary px-3 py-2">Access Request Logs</a>
+
+                                        @can('assign-optical-power')
+                                            @if($subdomain == 'disha')
+                                                <a href="{{ route('assign.ont',['name'=>$response1['data']['username'], 'oid'=>$doid]) }}" class="btn btn-success px-3 py-2">Assign/Update ONT</a>
+                                            @endif
+                                        @endcan
+
+                                        @if($opticalpower != 'Ont Not assign')
+                                            <a href="javascript:void(0)" class="btn btn-danger px-3 py-2" id="rebootont" data-oid="{{ $doid }}">Reboot ONT</a>
+                                            @can('register-ont')
+                                                <a href="javascript:void(0)" class="btn btn-danger px-3 py-2" id="deregist" data-oid="{{ $doid }}">De-Register</a>
+                                                <a href="javascript:void(0)" class="btn btn-danger px-3 py-2" id="regist" data-oid="{{ $doid }}">Register</a>
+                                            @endcan
+                                        @endif
+                                    @endif
+                                @endforeach
+                            @endif
                         @endif
-
-                        {{-- @endforeach --}}
-                @endif
-            </table>
-
-		<!-- /Subscribers -->
-	</div>
-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-
-<div class="container-fluid">
-    <div class="row">
-      <div class="col-sm-6 d-flex justify-content-center">
-        <div class="card shadow p-3 mb-5 bg-body rounded" style="width: 100%;">
-          <div class="card-header" style="{{ $cardHeader }}"><h5 class="card-title">User Details</h5></div>
+<div class="row row-cols-1 row-cols-md-2 g-4">
+      <div class="col">
+        <div class="card shadow-sm h-100">
+          <div class="card-header" style="{{ $cardHeader }}"><h5 class="card-title mb-0">User Details</h5></div>
           <div class="card-body" style="{{ $cardBody }}">
-            <table class="table-striped" width="100%">
-                <tr><th>Location Name </th><td><b>{{ $urll }}</b></td></tr>
-                <tr><th>UserName</th><td>{{ $response1['data']['username'] }}</td></tr>
-                <tr><th>Name</th><td>{{ $response1['data']['name'] }}</td></tr>
-                <tr><th>{{ $radiuslable }}</th><td>{!! html_entity_decode($radiuslink) !!}</td></tr>
-                <tr><th>Address</th><td>{{ $response1['data']['address1'] }}</td></tr>
-                <tr><th>Mobile</th><td><a href="whatsapp://send?phone={{ $mbl }}">{{ $mbl }}</a> <i class="bi bi-whatsapp"></i></td></tr>
-                @if ($response1['data']['status']=="expired")
-                    <tr><th>Status</th><td class="text-danger">Expired</td></tr>
-                @endif
-                @if($online=="Yes")
-                <tr class="text-success"><th>Online</th><td class="text-success">{{ $online }}</td></tr>
-                @else
-                <tr class="text-danger"><th>Online</th><td class="text-danger">{{ $online }}</td></tr>
-                @endif
-                <tr><th>Subscriber Since</th><td>{{ $response1['data']['subscriber_since'] }}</td></tr>
-            </table>
+            <div class="table-responsive">
+              <table class="table table-borderless table-sm mb-0">
+                  <tr><th>Location Name</th><td><b>{{ $urll }}</b></td></tr>
+                  <tr><th>UserName</th><td>{{ $response1['data']['username'] }}</td></tr>
+                  <tr><th>Name</th><td>{{ $response1['data']['name'] }}</td></tr>
+                  <tr><th>{{ $radiuslable }}</th><td>{!! html_entity_decode($radiuslink) !!}</td></tr>
+                  <tr><th>Address</th><td>{{ $response1['data']['address1'] }}</td></tr>
+                  <tr><th>Mobile</th><td><a href="whatsapp://send?phone={{ $mbl }}">{{ $mbl }}</a> <i class="bi bi-whatsapp"></i></td></tr>
+                  @if ($response1['data']['status'] == "expired")
+                      <tr><th>Status</th><td class="text-danger">Expired</td></tr>
+                  @endif
+                  <tr><th>Online</th><td class="{{ $online == 'Yes' ? 'text-success' : 'text-danger' }}">{{ $online }}</td></tr>
+                  <tr><th>Subscriber Since</th><td>{{ $response1['data']['subscriber_since'] }}</td></tr>
+              </table>
+            </div>
           </div>
         </div>
       </div>
-      <div class="col-sm-6 d-flex justify-content-center">
-        <div class="card shadow p-3 mb-5 bg-body rounded" style="width: 100%;">
-          <div class="card-header" style="background-color: #d4d4d4;"><h5 class="card-title">Package Details</h5></div>
-          <div class="card-body" style="background-color: #eeeeee;">
-            <table class="table-striped" width="100%">
-                <tr><th>Last Login at</th><td>{{ $lstlogindt . " (" . $diff_mins .")" }}</td></tr>
-                <tr><th>Location Package Name</th><td>{{ $response1['data']['location_package_name'] }}</td></tr>
-                <tr><th>Renewed at</th><td>{{ $renewdt .  " (" . $useddays .")" }}</td></tr>
-                <tr><th>Expires at</th><td>{{ $expirydt . " (" . $remainingdays . ")"}}</td></tr>
-                @if ($response1['data']['override_package_bandwidth'])
-                <tr><th>Override Package Bandwidth</th><td>Yes</td></tr>
-                <tr><th>Overridden Bandwidth Upload</th><td>{{ $response1['data']['overridden_bandwidth_upload'].$response1['data']['overridden_bandwidth_upload_unit'] }}</td></tr>
-                <tr><th>Overridden bandwidth Download</th><td>{{ $response1['data']['overridden_bandwidth_download'].$response1['data']['overridden_bandwidth_download_unit'] }}</td></tr>
-                @else
-                <tr><th>Override Package Bandwidth</th><td>No</td></tr>
-                @endif
-            </table>
+      <div class="col">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-secondary"><h5 class="card-title mb-0">Package Details</h5></div>
+          <div class="card-body bg-light">
+            <div class="table-responsive">
+              <table class="table table-borderless table-sm mb-0">
+                  <tr><th>Last Login at</th><td>{{ $lstlogindt . " (" . $diff_mins .")" }}</td></tr>
+                  <tr><th>Location Package Name</th><td>{{ $response1['data']['location_package_name'] }}</td></tr>
+                  <tr><th>Renewed at</th><td>{{ $renewdt .  " (" . $useddays .")" }}</td></tr>
+                  <tr><th>Expires at</th><td>{{ $expirydt . " (" . $remainingdays . ")"}}</td></tr>
+                  @if ($response1['data']['override_package_bandwidth'])
+                  <tr><th>Override Package Bandwidth</th><td>Yes</td></tr>
+                  <tr><th>Overridden Bandwidth Upload</th><td>{{ $response1['data']['overridden_bandwidth_upload'].$response1['data']['overridden_bandwidth_upload_unit'] }}</td></tr>
+                  <tr><th>Overridden bandwidth Download</th><td>{{ $response1['data']['overridden_bandwidth_download'].$response1['data']['overridden_bandwidth_download_unit'] }}</td></tr>
+                  @else
+                  <tr><th>Override Package Bandwidth</th><td>No</td></tr>
+                  @endif
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-sm-6 d-flex justify-content-center">
-        <div class="card shadow p-3 mb-5 bg-body rounded" style="width: 100%;">
-           <div class="card-header" style="{{ $opcardHeader }}"><h5 class="card-title">ONU / ONT Details (live)</h5></div>
+    <div class="row row-cols-1 row-cols-md-2 g-4 mt-4">
+      <div class="col">
+        <div class="card shadow-sm h-100">
+          <div class="card-header" style="{{ $opcardHeader }}"><h5 class="card-title mb-0">ONU / ONT Details (live)</h5></div>
           <div class="card-body" style="{{ $opcardBody }}">
-            <table class="table-striped" width="100%">
-                <tr><th>Model</th><td>{{ $ontmodel }}</td></tr>
-                <tr>
-                    <th>Optical Power</th>
-                        @php
-                            if($opticalpower <= env('MIN_ONT_POWER',null)){
-                                echo '<td class="text-danger"><b>'. $opticalpower . '</b></td>';
-                            }elseif($opticalpower=="Ont Not assign"){
-                                echo '<td>'. $opticalpower . '</td>';
-                            }elseif($opticalpower=="Snmp Not Available"){
-                                echo '<td>'. $opticalpower . '</td>';
-                            }elseif($opticalpower=="Not Available"){
-                                echo '<td>'. $opticalpower . '</td>';
-                            }elseif($opticalpower==0){
-                                echo '<td class="text-danger">Offline</td>';
-                            }else{
-                                echo '<td class="text-success"><b>'. $opticalpower . ' dBm</b></td>';
-                            }
-                        @endphp
-                        {{-- {{ env('MIN_ONT_POWER',null) }} --}}
-                </tr>
-                <tr>
-                    <th>TX Power</th>
-                        @php
-                    //    echo $ontuptime;
-                            if($opticalpower=="Ont Not assign"){
-                                echo '<td>'. $opticaltxpower . '</td>';
-                            }elseif($opticalpower=="Not Available"){
-                                echo '<td>'. $opticaltxpower . '</td>';
-                            }elseif($opticalpower=="Snmp Not Available"){
-                                echo '<td>'. $opticaltxpower . '</td>';
-                            }else{
-                                echo '<td>'. $opticaltxpower . ' dBm</td>';
-                            }
-                        @endphp
-                </tr>
-                <tr>
-                    <th>Uptime</th>
-                    <td>
-                        @php
-                    //    echo $ontuptime;
-                            if($ontuptime=="Ont Not assign"){
-                                echo $ontuptime;
-                            }elseif($ontuptime=="Not Available"){
-                                echo $ontuptime;
-                            }elseif($ontuptime=="Snmp Not Available"){
-                                echo $ontuptime;
-                            }else{
-                                echo secondsToTime($ontuptime);
-                            }
-                        @endphp
-                    </td>
-                </tr>
-                <tr><th>Serial</th><td>{{ $ontserial }}</td></tr>
-                <tr><th>Temp</th>
-                        @php
-                        
-                            if($onttemp=="Ont Not assign"){
-                                echo '<td>'.$onttemp.'</td>';
-                            }elseif ($onttemp=="Not Available") {
-                                echo '<td>'.$onttemp.'</td>';
-                            }elseif ($onttemp=="Snmp Not Available") {
-                                echo '<td>'.$onttemp.'</td>';
-                            }elseif($onttemp>=50){
-                                echo '<td class="text-danger"><b>'.$onttemp.'&deg;C</b></td>';
-                            }else{
-                                echo '<td>'.$onttemp.'&deg;C</td>';
-                            }
-                        @endphp
-                </tr>
-                <tr><th>EthernetPorts</th><td>{{ $onteth }}</td></tr>
-                <tr><th>Distance</th>
-                    <td>
-                        @php
-                        if($ontdist=="Ont Not assign"){
-                            echo $ontdist;
-                        }elseif ($ontdist=="Not Available") {
-                            echo $ontdist;
-                        }elseif ($ontdist=="Snmp Not Available") {
-                            echo $ontdist;
-                        }else{
-                            echo $ontdist. ' Meter';
-                        }
-                        @endphp
-                        {{-- {{ $ontdist }} Meter --}}
-                    </td>
-                </tr>
-                <tr><th>Last Down Status</th><td>{{ $ontstatus }}</td></tr>
-            </table>
+            <div class="table-responsive">
+              <table class="table table-borderless table-sm mb-0">
+                  <tr><th>Model</th><td>{{ $ontmodel }}</td></tr>
+                  <tr>
+                      <th>Optical Power</th>
+                          @php
+                              if($opticalpower <= env('MIN_ONT_POWER',null)){
+                                  echo '<td class="text-danger"><b>'. $opticalpower . '</b></td>';
+                              }elseif($opticalpower=="Ont Not assign"){
+                                  echo '<td>'. $opticalpower . '</td>';
+                              }elseif($opticalpower=="Snmp Not Available"){
+                                  echo '<td>'. $opticalpower . '</td>';
+                              }elseif($opticalpower=="Not Available"){
+                                  echo '<td>'. $opticalpower . '</td>';
+                              }elseif($opticalpower==0){
+                                  echo '<td class="text-danger">Offline</td>';
+                              }else{
+                                  echo '<td class="text-success"><b>'. $opticalpower . ' dBm</b></td>';
+                              }
+                          @endphp
+                  </tr>
+                  <tr>
+                      <th>TX Power</th>
+                          @php
+                              if($opticalpower=="Ont Not assign"){
+                                  echo '<td>'. $opticaltxpower . '</td>';
+                              }elseif($opticalpower=="Not Available"){
+                                  echo '<td>'. $opticaltxpower . '</td>';
+                              }elseif($opticalpower=="Snmp Not Available"){
+                                  echo '<td>'. $opticaltxpower . '</td>';
+                              }else{
+                                  echo '<td>'. $opticaltxpower . ' dBm</td>';
+                              }
+                          @endphp
+                  </tr>
+                  <tr>
+                      <th>Uptime</th>
+                      <td>
+                          @php
+                              if($ontuptime=="Ont Not assign"){
+                                  echo $ontuptime;
+                              }elseif($ontuptime=="Not Available"){
+                                  echo $ontuptime;
+                              }elseif($ontuptime=="Snmp Not Available"){
+                                  echo $ontuptime;
+                              }else{
+                                  echo secondsToTime($ontuptime);
+                              }
+                          @endphp
+                      </td>
+                  </tr>
+                  <tr><th>Serial</th><td>{{ $ontserial }}</td></tr>
+                  <tr><th>Temp</th>
+                          @php
+                              if($onttemp=="Ont Not assign"){
+                                  echo '<td>'.$onttemp.'</td>';
+                              }elseif ($onttemp=="Not Available") {
+                                  echo '<td>'.$onttemp.'</td>';
+                              }elseif ($onttemp=="Snmp Not Available") {
+                                  echo '<td>'.$onttemp.'</td>';
+                              }elseif($onttemp>=50){
+                                  echo '<td class="text-danger"><b>'.$onttemp.'&deg;C</b></td>';
+                              }else{
+                                  echo '<td>'.$onttemp.'&deg;C</td>';
+                              }
+                          @endphp
+                  </tr>
+                  <tr><th>EthernetPorts</th><td>{{ $onteth }}</td></tr>
+                  <tr><th>Distance</th>
+                      <td>
+                          @php
+                          if($ontdist=="Ont Not assign"){
+                              echo $ontdist;
+                          }elseif ($ontdist=="Not Available") {
+                              echo $ontdist;
+                          }elseif ($ontdist=="Snmp Not Available") {
+                              echo $ontdist;
+                          }else{
+                              echo $ontdist. ' Meter';
+                          }
+                          @endphp
+                      </td>
+                  </tr>
+                  <tr><th>Last Down Status</th><td>{{ $ontstatus }}</td></tr>
+              </table>
+            </div>
           </div>
         </div>
       </div>
-      <div class="col-sm-6 d-flex justify-content-center">
-        <div class="card shadow p-3 mb-5 bg-body rounded" style="width: 100%;">
-          <div class="card-header" style="background-color: #d4d4d4;"><h5 class="card-title">User Data Details</h5></div>
-          <div class="card-body" style="background-color: #eeeeee;">
-            <table class="table-striped" width="100%">
-                <tr><th>Total Upload Today </th><td>{{ $downloadtoday }}</td></tr>
-                <tr><th>Total Download Today</th><td>{{ $uploadtoday  }}</td></tr>
-                <tr><th>Total Download/Upoad Today</th><td>{{ $totaltoday }}</td></tr>
-                <tr><th>Total Upload</th><td>{{ $response1['data']['bytes_uploaded_total_human'] }}</td></tr>
-                <tr><th>Total Download</th><td>{{ $response1['data']['bytes_downloaded_total_human'] }}</td></tr>
-                <tr><th>Total</th><td>{{ $response1['data']['data_used_total_human'] }}</td></tr>
-                <tr><th>Advance Renewal</th><td>{{ $adv }}</td></tr>
-                {{-- <tr><th>advance_renewal_package_idddd</th><td>{{ $response1['data']['advance_renewal_package_id'] }}</td></tr> --}}
-                @foreach ($locationid as $loc)
-                    @if ($loc->radiusid==$response1['data']['advance_renewal_package_id'])
-                    <tr><th>Advance Renewal Package</th><td>{{ $loc->name }}</td></tr>
-                    {{-- @else --}}
-                    {{-- <tr><th>advance_renewal_package_id</th><td>{{ $loc->radiusid }}</td></tr> --}}
-                    @endif
-                @endforeach
-            </table>
+      <div class="col">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-secondary"><h5 class="card-title mb-0">User Data Details</h5></div>
+          <div class="card-body bg-light">
+            <div class="table-responsive">
+              <table class="table table-borderless table-sm mb-0">
+                  <tr><th>Total Upload Today</th><td>{{ $downloadtoday }}</td></tr>
+                  <tr><th>Total Download Today</th><td>{{ $uploadtoday }}</td></tr>
+                  <tr><th>Total Download/Upload Today</th><td>{{ $totaltoday }}</td></tr>
+                  <tr><th>Total Upload</th><td>{{ $response1['data']['bytes_uploaded_total_human'] }}</td></tr>
+                  <tr><th>Total Download</th><td>{{ $response1['data']['bytes_downloaded_total_human'] }}</td></tr>
+                  <tr><th>Total</th><td>{{ $response1['data']['data_used_total_human'] }}</td></tr>
+                  <tr><th>Advance Renewal</th><td>{{ $adv }}</td></tr>
+                  @foreach ($locationid as $loc)
+                      @if ($loc->radiusid == $response1['data']['advance_renewal_package_id'])
+                          <tr><th>Advance Renewal Package</th><td>{{ $loc->name }}</td></tr>
+                      @endif
+                  @endforeach
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
-  </div>
+
+    <div class="d-flex justify-content-start mt-3">
+        <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
+    </div>
+</div>
 @endsection
-{{-- {{ env('APP_ENV') }} --}}
-
-@push('page-js')
-<script>
-$(document).ready(function() {
-$('body').on('click','#deregist',function(){
-        //e.preventDefault();
-        var $button = $(this);
-        // console.log($button); // Check if $button is defined
-        $button.prop('disabled', false); // Enable button
-        $button.html('Processing...');
-        var route = "{{route('de.register')}}";
-        var variable = $(this).data('oid');
-        $.ajax({
-            type: 'GET',
-            url: route,
-            data: {
-                oid: variable,
-            },
-            success: function(response) {
-                // $('#opticalpowers').DataTable().ajax.reload(null, false);
-                $button.html('De-Register'); // Revert button text
-                $button.prop('disabled', false);
-            }
-        });
-    });
-
-$('body').on('click','#regist',function(){
-        //e.preventDefault();
-        var $button = $(this);
-        // console.log($button); // Check if $button is defined
-        $button.prop('disabled', false); // Enable button
-        $button.html('Processing...');
-        var route = "{{route('ont.register')}}";
-        var variable = $(this).data('oid');
-        $.ajax({
-            type: 'GET',
-            url: route,
-            data: {
-                oid: variable,
-            },
-            success: function(response) {
-                // $('#opticalpowers').DataTable().ajax.reload(null, false);
-                $button.html('Register'); // Revert button text
-                $button.prop('disabled', false);
-            }
-        });
-    });
-
-    $('body').on('click','#rebootont',function(){
-        //e.preventDefault();
-        var $button = $(this);
-        // console.log($button); // Check if $button is defined
-        $button.prop('disabled', false); // Enable button
-        $button.html('Processing...');
-        var route = "{{route('reboot.ont')}}";
-        var variable = $(this).data('oid');
-        $.ajax({
-            type: 'GET',
-            url: route,
-            data: {
-                oid: variable,
-            },
-            success: function(response) {
-                // $('#opticalpowers').DataTable().ajax.reload(null, false);
-                $button.html('Reboot ONT'); // Revert button text
-                $button.prop('disabled', false);
-            }
-        });
-    });
-
-    $('body').on('click','#resetmac',function(){
-            //e.preventDefault();
-            var $button = $(this);
-            // console.log($button); // Check if $button is defined
-            $button.prop('disabled', false); // Enable button
-            $button.html('Processing...');
-            var route = "{{route('mac.reset')}}";
-            var name = $(this).data('name');
-            var id = $(this).data('id');
-            var location = $(this).data('location');
-            $.ajax({
-                type: 'GET',
-                url: route,
-                data: {
-                    name: name,
-                    id: id,
-                    location: location
-                },
-                success: function(response) {
-                    if(response.success){
-                        $('#opticalpowers').DataTable().ajax.reload(null, false);
-                        $('#message-container').addClass('alert alert-success alert-dismissible');
-                        $('#message-container').html('MAC reseted successfully. <button type="button" class="close" data-dismiss="alert">&times;</button>');
-                        $('#message-container').show();
-                    } else {
-                        $('#message-container').addClass('alert alert-danger alert-dismissible');
-                        $('#message-container').html('MAC reset failed. <button type="button" class="close" data-dismiss="alert">&times;</button>');
-                        $('#message-container').show();
-                    }
-                    $button.prop('disabled', false);
-                    $button.html('Reset MAC');
-                }
-            });
-        });
-});
-</script>
-@endpush

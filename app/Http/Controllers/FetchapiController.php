@@ -120,7 +120,7 @@ class FetchapiController extends Controller
         $this->login();
         $tokan = session()->get('tokan');
 
-        $title = "Subscriber Details";
+        $title = "Subscriber Details of ". $request->name;
         $opticalpower ="Ont Not assign";
         $opticaltxpower = "Ont Not assign";
         $ontuptime="Not Available";
@@ -263,7 +263,7 @@ class FetchapiController extends Controller
         // return $this->toDateInterval(1640467)->format('%a days %h hours %i minutes'));
 
         activity()->causedBy(auth()->user())->useLog('Location')->log($logtext);
-        return view('admin.radius.microtik', compact('title','response1','urll','fromd','locationid','userlocations','opticalpower','doid','ontuptime','ontserial','onttemp','onteth','ontmodel', 'ontdist','opticaltxpower','ontstatus'));
+        return view('radius.microtik', compact('title','response1','urll','fromd','locationid','userlocations','opticalpower','doid','ontuptime','ontserial','onttemp','onteth','ontmodel', 'ontdist','opticaltxpower','ontstatus'));
 
     }
 
@@ -575,7 +575,7 @@ class FetchapiController extends Controller
 
         $this->login();
         $tokan = session()->get('tokan');
-        $title = "Subscriber-Access Logs";
+        $title = "Subscriber-Access Logs of ". $request->name;
 
 
         $location = $request->location;
@@ -1015,7 +1015,7 @@ class FetchapiController extends Controller
 
             }
         }
-        return view('admin.radius.speed', compact('title','name','location','id'));
+        return view('radius.speed', compact('title','name','location','id'));
     }
 
     public function searchsubscriber(Request $request){

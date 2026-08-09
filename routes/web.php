@@ -76,6 +76,8 @@ Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscr
     Route::get('viewCommand', [NewMicrotikController::class, 'viewCommand'])->name('view.command');
     Route::get('traffic-chart/{serverId}/{username}', [NewMicrotikController::class, 'showTrafficChart'])->name('traffic.chart');
     Route::get('ppp-traffic', [NewMicrotikController::class, 'getPppTraffic'])->name('microtik.ppp.traffic');
+    Route::get('live-traffic-data', [NewMicrotikController::class, 'getRealTimeTraffic'])->name('microtik.live.traffic.data');
+    Route::get('live-traffic-stream', [NewMicrotikController::class, 'streamTraffic'])->name('microtik.live.traffic.stream');
     Route::get('showservices', [NewMicrotikController::class, 'showServices'])->name('show.services');
     Route::post('pptp/update', [NewMicrotikController::class, 'updatePptp'])->name('pptp.update');
     Route::post('l2tp/update', [NewMicrotikController::class, 'updateL2tp'])->name('l2tp.update');
@@ -88,6 +90,7 @@ Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscr
     Route::get('systemhistory', [NewMicrotikController::class, 'getSystemHistory'])->name('system.history');
     Route::get('viewCommand', [NewMicrotikController::class, 'viewCommand'])->name('view.command');
     Route::post('runCommand', [NewMicrotikController::class, 'runCommand'])->name('run.command');
+    Route::get('liveservertraffic', [NewMicrotikController::class, 'liveservertraffic'])->name('live.server.traffic');
 
     Route::get('locationdetails',[FetchapiController::class, 'locationdetails'])->name('locationdetails.show');
     Route::get('showsubscriber',[FetchapiController::class, 'subscriberDetails'])->name('subscriber.show');

@@ -232,6 +232,110 @@ class NewMicrotikController extends Controller
         ]);
     }
 
+    public function streamTraffic(Request $request)
+    {
+        $server = Server::where('enable', '1')->first() ?? Server::find(1);
+        if (!$server) {
+            return response()->json(['error' => 'No MikroTik server configured'], 404);
+        }
+
+        $interfaces = array_filter([
+            env('MICROTIK_INTERFACE1'),
+            env('MICROTIK_INTERFACE2'),
+        ]);
+
+        if (empty($interfaces)) {
+            return response()->json(['error' => 'No interface configured'], 400);
+        }
+
+        return response()->stream(function () use ($server, $interfaces) {
+            try {
+                ignore_user_abort(true);
+                set_time_limit(0);
+                session_write_close();
+
+                if (function_exists('apache_setenv')) {
+                    @apache_setenv('no-gzip', '1');
+                }
+                @ini_set('zlib.output_compression', '0');
+                @ini_set('output_buffering', 'off');
+                @ini_set('implicit_flush', '1');
+                while (ob_get_level() > 0) {
+                    @ob_end_flush();
+                }
+                ob_implicit_flush(true);
+                echo str_repeat(' ', 4096);
+                @flush();
+
+                $legacy = new LegacyRouterosAPI();
+                $legacy->debug = false;
+
+                if (!$legacy->connect($server->mip, $server->username, $server->password)) {
+                    echo json_encode(['type' => 'error', 'message' => 'Unable to connect to MikroTik']) . "\n";
+                    @flush();
+                    return;
+                }
+
+                echo json_encode(['type' => 'status', 'server' => $server->name ?? $server->mip]) . "\n";
+                @flush();
+
+                while (!connection_aborted()) {
+                    $totalBits = 0.0;
+                    $metrics = [];
+
+                    foreach ($interfaces as $interface) {
+                        try {
+                            $response = $legacy->comm('/interface/monitor-traffic', [
+                                'interface' => $interface,
+                                'once' => true,
+                            ]);
+
+                            if (is_array($response) && isset($response[0]) && is_array($response[0])) {
+                                $entry = $response[0];
+                                $rxBits = (float) ($entry['rx-bits-per-second'] ?? 0);
+                                $txBits = (float) ($entry['tx-bits-per-second'] ?? 0);
+                                $metrics[$interface] = [
+                                    'rx-bps' => $rxBits,
+                                    'tx-bps' => $txBits,
+                                    'total-bps' => $rxBits + $txBits,
+                                ];
+                                $totalBits += $rxBits + $txBits;
+                            } else {
+                                Log::warning('Unexpected MikroTik traffic response', ['interface' => $interface, 'response' => $response]);
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('MikroTik traffic query failed', ['interface' => $interface, 'error' => $e->getMessage()]);
+                        }
+                    }
+
+                    echo json_encode([
+                        'type' => 'traffic',
+                        'metrics' => $metrics,
+                        'total-bps' => $totalBits,
+                        'total-mbps' => round($totalBits / 1000000, 4),
+                    ]) . "\n";
+                    @flush();
+                    sleep(5);
+                }
+            } catch (\Throwable $e) {
+                Log::error('NewMicrotikController streamTraffic failure', ['server_id' => $server->id, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                echo json_encode(['type' => 'error', 'message' => 'Stream failed: ' . $e->getMessage()]) . "\n";
+                @flush();
+            } finally {
+                try {
+                    $legacy->disconnect();
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to disconnect MikroTik stream: ' . $e->getMessage());
+                }
+            }
+        }, 200, [
+            'Content-Type' => 'text/plain; charset=utf-8',
+            'Cache-Control' => 'no-cache, no-transform',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
     public function shedule(Request $request){
 
         $title = "Sheduler";
@@ -426,14 +530,9 @@ class NewMicrotikController extends Controller
 
     public function microtikLogin(Request $request)
     {
-        $serverId = $request->input('sserver');
-        if (!$serverId) {
-            return response()->json(['success' => false, 'message' => 'Server selection required'], 400);
-        }
-
-        $server = Server::find($serverId);
+        $server = Server::where('enable', '1')->first() ?? Server::find(1);
         if (!$server) {
-            return response()->json(['success' => false, 'message' => 'Selected server not found'], 404);
+            return response()->json(['success' => false, 'message' => 'No MikroTik server configured'], 404);
         }
 
         try {
@@ -447,15 +546,15 @@ class NewMicrotikController extends Controller
                 Session::put('mikrotik_ip', $ip);
                 Session::put('mikrotik_user', $user);
                 Session::put('mikrotik_password', $password);
-                Session::put('mikrotik_server_id', $serverId);
+                Session::put('mikrotik_server_id', $server->id);
                 Session::put('isLoggedIn', true);
-                return response()->json(['success' => true]);
+                return response()->json(['success' => true, 'server_name' => $server->name ?? $server->mip]);
             }
 
-            Log::error('MikroTik login failed', ['server_id' => $serverId, 'ip' => $ip, 'user' => $user]);
+            Log::error('MikroTik login failed', ['server_id' => $server->id, 'ip' => $ip, 'user' => $user]);
             return response()->json(['success' => false, 'message' => 'Unable to connect to MikroTik'], 401);
         } catch (\Exception $e) {
-            Log::error('Exception during MikroTik login', ['error' => $e->getMessage(), 'server_id' => $serverId]);
+            Log::error('Exception during MikroTik login', ['error' => $e->getMessage(), 'server_id' => $server->id]);
             return response()->json(['success' => false, 'message' => 'Internal Server Error'], 500);
         }
     }
@@ -476,35 +575,66 @@ class NewMicrotikController extends Controller
             $ip = Session::get('mikrotik_ip');
             $user = Session::get('mikrotik_user');
             $password = Session::get('mikrotik_password');
+            $interfaces = array_filter([
+                env('MICROTIK_INTERFACE1'),
+                env('MICROTIK_INTERFACE2'),
+            ]);
 
-            $API = new RouterosAPI();
+            $config = (new Config())
+                ->set('host', $ip)
+                ->set('user', $user)
+                ->set('pass', $password)
+                ->set('port', 8728)
+                ->set('timeout', $this->connectionTimeout)
+                ->set('socket_timeout', max(15, $this->connectionTimeout * 2))
+                ->set('ssl', false);
 
-            if ($API->connect($ip, $user, $password)) {
-                $interfaces = [env('MICROTIK_INTERFACE1'), env('MICROTIK_INTERFACE2')];
-                $trafficData = [];
+            $client = new Client($config);
+            $totalRxBits = 0.0;
+            $totalTxBits = 0.0;
+            $metrics = [];
 
-                $username = auth()->user()->name; // Get the logged-in username
-
-                // Log the username to MikroTik
-                $API->write('/log/error', false);
-                $API->write('=message=User ' . $username . ' fetching traffic data', true);
-                $API->read();
-
+            try {
                 foreach ($interfaces as $interface) {
-                    $API->write('/interface/monitor-traffic', false);
-                    $API->write('=interface=' . $interface, false);
-                    $API->write('=once=', true);
-                    $READ = $API->read(false);
-                    $ARRAY = $API->parseResponse($READ);
-                    $trafficData[$interface] = $ARRAY;
-                }
-                // $API->disconnect();
+                    $query = (new Query('/interface/monitor-traffic'))
+                        ->equal('interface', $interface)
+                        ->equal('once');
 
-                return response()->json($trafficData);
-            } else {
-                Log::error('Unable to connect to MikroTik device', ['ip' => $ip, 'user' => $user]);
-                return response()->json(['error' => 'Unable to connect to MikroTik device'], 500);
+                    $responses = $client->query($query)->read();
+                    if (!empty($responses) && is_array($responses[0])) {
+                        $response = $responses[0];
+                        $rxBits = (float) ($response['rx-bits-per-second'] ?? 0);
+                        $txBits = (float) ($response['tx-bits-per-second'] ?? 0);
+                        $totalRxBits += $rxBits;
+                        $totalTxBits += $txBits;
+                        $metrics[$interface] = [
+                            'rx-bps' => $rxBits,
+                            'tx-bps' => $txBits,
+                            'total-bps' => $rxBits + $txBits,
+                        ];
+                    } else {
+                        Log::warning('Unexpected MikroTik traffic response', ['interface' => $interface, 'responses' => $responses]);
+                    }
+                }
+            } finally {
+                if (method_exists($client, 'disconnect')) {
+                    try {
+                        $client->disconnect();
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed to disconnect RouterOS client: ' . $e->getMessage());
+                    }
+                }
             }
+
+            $totalBits = $totalRxBits + $totalTxBits;
+            return response()->json([
+                'interfaces' => $interfaces,
+                'metrics' => $metrics,
+                'rx-bps' => $totalRxBits,
+                'tx-bps' => $totalTxBits,
+                'total-bps' => $totalBits,
+                'total-mbps' => round($totalBits / 1000 / 1000, 4),
+            ]);
         } catch (\Exception $e) {
             Log::error('Exception during traffic data fetching', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Internal Server Error'], 500);
@@ -1605,5 +1735,16 @@ class NewMicrotikController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-}
 
+    public function liveservertraffic(Request $request)
+    {
+        $title = "Live Server Traffic";
+        $server = Server::where('enable', '1')->first() ?? Server::find(1);
+
+        return view('microtik.liveservertraffice', compact('title', 'server'));
+    }
+
+
+
+
+}
