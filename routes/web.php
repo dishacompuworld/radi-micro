@@ -181,6 +181,8 @@ Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscr
     Route::get('sendopmail', [SendMail::class, 'sendop'])->name('send.op.mail');
 
     Route::get('settings',[SettingController::class,'index'])->name('settings');
+    Route::post('settings',[SettingController::class,'update'])->name('settings.update');
+    Route::post('settings/snmp-toggle',[SettingController::class,'toggleSnmp'])->name('settings.snmp.toggle');
 
     //TaskController
     Route::post('/task/enable', [TaskController::class, 'enableTask'])->name('task.enable');

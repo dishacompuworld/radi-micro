@@ -94,7 +94,7 @@
     <div id="message-container" style="display: none;" class="col-sm-12"></div>
 <div>
 	{{-- @if (isset('lastchkmsg')) --}}
-	<label class="badge badge-success"> {{ $msg; }}</lable>
+	<label class="badge" style="color: #888888;"> {{ $msg; }}</label>
 	{{-- @endif --}}
 </div>
 
@@ -181,15 +181,15 @@
                         successmessage = successmessage.replace(':user', response.user);
                         $('#opticalpowers').DataTable().ajax.reload(null, false);
                         $('#message-container').addClass('alert alert-success alert-dismissible');
-                        $('#message-container').html(successmessage + ' <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                        $('#message-container').html(successmessage);
                         $('#message-container').show();
                     } else {
                         $('#message-container').addClass('alert alert-danger alert-dismissible');
-                        $('#message-container').html('{{ $oprefreshfailmsg }} <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                        $('#message-container').html('{{ $oprefreshfailmsg }}');
                         $('#message-container').show();
                     }
                     $button.prop('disabled', false);
-                    $button.html('<i class="bi bi-arrow-repeat"></i>');
+                    $button.html('<i class="bx bx-refresh bx-xs"></i>');
                 }
             });
         });
@@ -220,12 +220,12 @@
                     deletemessage = deletemessage.replace(':oid', response.oid);
                     $('#opticalpowers').DataTable().ajax.reload(null, false);
                     $('#message-container').addClass('alert alert-success alert-dismissible');
-                    $('#message-container').html(deletemessage + ' <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                    $('#message-container').html(deletemessage);
                     $('#message-container').show();
                 } else {
                     deletemessagefail = deletemessagefail.replace(':oid', response.oid);
                     $('#message-container').addClass('alert alert-danger alert-dismissible');
-                    $('#message-container').html(deletemessagefail + ' <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                    $('#message-container').html(deletemessagefail );
                     $('#message-container').show();
                 }
                 $button.prop('disabled', false);
@@ -260,13 +260,13 @@
                     rebootmessage = rebootmessage.replace(':oid', response.oid);
                     $('#opticalpowers').DataTable().ajax.reload(null, false);
                     $('#message-container').addClass('alert alert-success alert-dismissible');
-                    $('#message-container').html(rebootmessage + ' <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                    $('#message-container').html(rebootmessage );
                     $('#message-container').show();
                 }else {
                     rebootmessagefail = rebootmessagefail.replace(':oid', response.oid);
                     $('#opticalpowers').DataTable().ajax.reload(null, false);
                     $('#message-container').addClass('alert alert-danger alert-dismissible');
-                    $('#message-container').html(rebootmessagefail + ' <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                    $('#message-container').html(rebootmessagefail );
                     $('#message-container').show();
                 }
                 $button.html('<i class="bi bi-power"></i>'); // Revert button text

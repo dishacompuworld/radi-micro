@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'App') }} - {{ ucfirst($title ?? '') }}</title>
+        <title>{{ appSettings('app_name', config('app.name', 'App')) }} - {{ ucfirst($title ?? '') }}</title>
 
          <!-- Icons. Uncomment required icon fonts -->
     <link rel="stylesheet" href="{{ asset('assets/vendor/fonts/boxicons.css') }}" />
