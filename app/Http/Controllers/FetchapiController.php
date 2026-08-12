@@ -32,6 +32,7 @@ class FetchapiController extends Controller
         // $this->middleware('permission:overright-bandwidth',['only' => ['overrightspeed']]);
         // //
     }
+    
 
     public function login(){
 

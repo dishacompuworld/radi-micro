@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -44,13 +45,28 @@ class PrtgApiController extends Controller
             ]]);
         // // $this->middleware('permission:test-api', ['only' => ['apitest']]);
         
-        // Load PRTG API configuration
-        $this->apiUrl = env('PRTG_URL', null);
-        $this->apiKey = env('PRTG_API_KEY', null);
-        $this->allTrafficGraphId = env('PRTG_ALL_TRAFFIC_GRAPH_ID', null);
-        $this->mainProbId = env('PRTG_MAIN_PROB_ID', null);
-        $this->msebProbId = env('PRTG_MSEB', null);
-        $this->tempProbId = env('PRTG_TEMP', null);
+        // Load PRTG API configuration from the saved settings database values.
+        $this->apiUrl = $this->getSavedSettingValue('PRTG_URL');
+        $this->apiKey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $this->allTrafficGraphId = $this->getSavedSettingValue('PRTG_ALL_TRAFFIC_GRAPH_ID');
+        $this->mainProbId = $this->getSavedSettingValue('PRTG_MAIN_PROB_ID');
+        $this->msebProbId = $this->getSavedSettingValue('PRTG_MSEB');
+        $this->tempProbId = $this->getSavedSettingValue('PRTG_TEMP');
+    }
+
+    private function getSavedSettingValue(string $key, ?string $fallback = null): ?string
+    {
+        $dbValue = Setting::where('key', strtolower($key))->value('value');
+
+        if ($dbValue === null || $dbValue === '') {
+            $dbValue = Setting::where('key', $key)->value('value');
+        }
+
+        if ($dbValue !== null && $dbValue !== '') {
+            return (string) $dbValue;
+        }
+
+        return env($key, $fallback);
     }
 
     /**
@@ -95,9 +111,9 @@ class PrtgApiController extends Controller
     }
 
     public function getfirstchart(){
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
-        $graph_id = env('PRTG_ALL_TRAFFIC_GRAPH_ID',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $graph_id = $this->getSavedSettingValue('PRTG_ALL_TRAFFIC_GRAPH_ID');
 
         $svg_file = Http::get($prtg_link . '/chart.svg?type=graph&width=800&height=350&graphid=0&id=' . $graph_id .'&graphstyling=showLegend%3D%270%27+baseFontSize%3D%276%27&apitoken=' . $prtg_apikey);
 
@@ -106,9 +122,9 @@ class PrtgApiController extends Controller
     }
 
     public function getsecondchart(){
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
-        $graph_id = env('PRTG_ALL_TRAFFIC_GRAPH_ID',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $graph_id = $this->getSavedSettingValue('PRTG_ALL_TRAFFIC_GRAPH_ID');
 
         $svg_file1 = Http::get($prtg_link . '/chart.svg?type=graph&width=800&height=350&graphid=1&id=' . $graph_id .'&graphstyling=showLegend%3D%271%27+baseFontSize%3D%275%27&hide=-4&apitoken='. $prtg_apikey);
 
@@ -118,9 +134,9 @@ class PrtgApiController extends Controller
 
 
     public function generateSVG1(){
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
-        $graph_id = env('PRTG_ALL_TRAFFIC_GRAPH_ID',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $graph_id = $this->getSavedSettingValue('PRTG_ALL_TRAFFIC_GRAPH_ID');
 
 
         // Generate SVG content for the first image 
@@ -132,9 +148,9 @@ class PrtgApiController extends Controller
 
 
     public function generateSVG2(){
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
-        $graph_id = env('PRTG_ALL_TRAFFIC_GRAPH_ID',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $graph_id = $this->getSavedSettingValue('PRTG_ALL_TRAFFIC_GRAPH_ID');
 
 
         // Generate SVG content for the first image 
@@ -146,9 +162,9 @@ class PrtgApiController extends Controller
 
     public function downsensors(){
 
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
-        $mainprobid = env('PRTG_MAIN_PROB_ID',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $mainprobid = $this->getSavedSettingValue('PRTG_MAIN_PROB_ID');
 
         $response = Http::get($prtg_link.'/api/getobjectstatus.htm?id=' . $mainprobid .'&name=downsens&apitoken='. $prtg_apikey);
 
@@ -165,9 +181,9 @@ class PrtgApiController extends Controller
 
     public function upsensors(){
 
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
-        $mainprobid = env('PRTG_MAIN_PROB_ID',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $mainprobid = $this->getSavedSettingValue('PRTG_MAIN_PROB_ID');
 
         $response = Http::get($prtg_link.'/api/getobjectstatus.htm?id=' . $mainprobid .'&name=upsens&apitoken='. $prtg_apikey);
 
@@ -209,9 +225,9 @@ class PrtgApiController extends Controller
         $title = "PRTG History Grabh";
         date_default_timezone_set("Asia/Kolkata");
 
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
-        $graph_id = env('PRTG_ALL_TRAFFIC_GRAPH_ID',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
+        $graph_id = $this->getSavedSettingValue('PRTG_ALL_TRAFFIC_GRAPH_ID');
 
         $sdtime = $request->sdtime;
 
@@ -505,7 +521,7 @@ class PrtgApiController extends Controller
     public function getMsebStatusTest(){
     $apiEndpoint = '/api/getsensordetails.json';
         $url = $this->apiUrl . $apiEndpoint;
-        $prtg_apikey = env('PRTG_API_KEY',null);
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
 
         // try {
             $response = Http::get($url, [
@@ -628,8 +644,8 @@ class PrtgApiController extends Controller
 
         $username = "rajesh";
         $pass = "Pass_1234";
-        $prtg_link = env('PRTG_URL',null);
-        $prtg_apikey = env('PRTG_API_KEY',null);
+        $prtg_link = $this->getSavedSettingValue('PRTG_URL');
+        $prtg_apikey = $this->getSavedSettingValue('PRTG_API_KEY');
 
         $response = Http::get($prtg_link.'/api/table.json?content=sensors&output=json&columns=device,sensor,lastvalue&username=' . $username . '&password=' . $pass);
         // $response = Http::get($prtg_link. '/api/getsensordetails.json?id=2233&apitoken='. $prtg_apikey);
