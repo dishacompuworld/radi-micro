@@ -258,6 +258,7 @@ class SettingController extends Controller
             $this->sendTelnetNegotiation($telnet);
             fwrite($telnet, "\r\n");
             fflush($telnet);
+            usleep(150000);
 
             $response = $this->readTelnetResponse($telnet, ['login:', 'username:', 'user:', 'password:'], 15);
             Log::debug('Telnet initial response raw: ' . bin2hex($response));
@@ -278,6 +279,7 @@ class SettingController extends Controller
                 Log::debug('Telnet login prompt detected, sending username: ' . $oltUsername);
                 fwrite($telnet, trim($oltUsername) . "\r\n");
                 fflush($telnet);
+                usleep(200000);
                 $response .= $this->readTelnetResponse($telnet, ['password:', 'login:', 'username:', 'user:'], 10);
                 Log::debug('Telnet after username response raw: ' . bin2hex($response));
                 Log::debug('Telnet after username response: ' . trim($response));
@@ -287,6 +289,7 @@ class SettingController extends Controller
                 Log::debug('Telnet password prompt detected, sending password length: ' . strlen($oltPassword));
                 fwrite($telnet, $oltPassword . "\r\n");
                 fflush($telnet);
+                usleep(200000);
                 $response .= $this->readTelnetResponse($telnet, ['>', '#', ']', 'login:', 'username:', 'user:', 'invalid', 'error'], 10);
                 Log::debug('Telnet after password response raw: ' . bin2hex($response));
                 Log::debug('Telnet after password response: ' . trim($response));
@@ -399,25 +402,24 @@ class SettingController extends Controller
         $prompts = $includeDefault ? array_merge($defaultPrompts, $prompts) : $prompts;
 
         $cleanOutput = preg_replace('/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F]+/', '', $output);
-        $cleanLower = strtolower($cleanOutput);
 
+        // Robust detection: catch common login/password prompts even if they
+        // appear mid-line or without a trailing newline. For simple shell
+        // prompts like '>' '#' ']' we use a substring check.
+        $loginPattern = '/\b(user(name)?|login|password)\b\s*[:]?/i';
+        if (preg_match($loginPattern, $cleanOutput)) {
+            return true;
+        }
+
+        $lower = strtolower($cleanOutput);
         foreach ($prompts as $prompt) {
-            $promptLower = strtolower($prompt);
-
-            if (in_array($promptLower, ['login:', 'username:', 'user:', 'password:'], true)) {
-                $pattern = '/(?:^|\r?\n)\s*' . preg_quote($prompt, '/') . '\s*$/im';
-                if (preg_match($pattern, $cleanOutput)) {
-                    return true;
-                }
-
-                if (preg_match('/(?:^|\r?\n)\s*User\s*:\s*$/im', $cleanOutput) && $promptLower === 'user:') {
-                    return true;
-                }
-
+            $pl = strtolower($prompt);
+            // skip the login-like prompts because we've already handled them
+            if (in_array($pl, ['login:', 'username:', 'user:', 'password:'], true)) {
                 continue;
             }
 
-            if (strpos($cleanLower, $promptLower) !== false) {
+            if (strpos($lower, $pl) !== false) {
                 return true;
             }
         }
@@ -436,6 +438,13 @@ class SettingController extends Controller
             'incorrect password',
         ];
 
+        // If we already detected a usable command prompt in the output
+        // (for example '>' or '#'), treat the session as authenticated
+        // even if the banner contained an earlier "login invalid" string.
+        if ($this->hasTelnetPrompt($output, ['>', '#', ']'], false)) {
+            return false;
+        }
+
         $normalized = strtolower($output);
         foreach ($failures as $failure) {
             if (strpos($normalized, $failure) !== false) {
@@ -451,6 +460,7 @@ class SettingController extends Controller
         fwrite($telnet, $command . "\r\n");
         fflush($telnet);
 
+        usleep(150000);
         $response = $this->readTelnetResponse($telnet, $stopPrompts, $timeout);
         Log::debug('Telnet execute command [' . $command . '] response: ' . trim($response));
 
