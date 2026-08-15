@@ -174,7 +174,7 @@ Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscr
     Route::get('pppoe/deleted', [PPPoEUserController::class, 'deleted'])->name('pppoe.deleted');
     Route::get('pppoe/delet', [PPPoEUserController::class, 'delet'])->name('pppoe.delet');
     Route::get('pppoe/ping', [PPPoEUserController::class, 'ping'])->name('pppoe.ping');
-    Route::get('pppoe/real-time-ping', [PPPoEUserController::class, 'realTimePing']);
+    Route::get('pppoe/real-time-ping', [PPPoEUserController::class, 'realTimePing'])->name('pppoe.real-time-ping');
 
     Route::get('sendmail', [SendMail::class, 'sendop'])->name('send.mail');
 

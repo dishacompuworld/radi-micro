@@ -270,8 +270,13 @@ class PPPoEUserController extends Controller
             while ($iterations < $pingCount) {
                 $pingResult = $this->executeCommand('/ping', ['address' => $ip, 'count' => 1]);
 
-                if ($pingResult) {
-                    echo 'data: ' . json_encode($pingResult) . "\n\n";
+                if ($pingResult !== null && $pingResult !== false && $pingResult !== []) {
+                    $payload = is_array($pingResult) ? $pingResult : ['raw' => $pingResult];
+                    echo 'data: ' . json_encode($payload) . "\n\n";
+                    ob_flush();
+                    flush();
+                } else {
+                    echo 'data: ' . json_encode(['error' => 'No ping result returned for ' . $ip]) . "\n\n";
                     ob_flush();
                     flush();
                 }
@@ -766,6 +771,49 @@ class PPPoEUserController extends Controller
         } finally {
             $this->disconnectClient();
         }
+    }
+
+    public function ping(Request $request)
+    {
+        $title = "User Ping";
+        $iid = $request->get('server');
+        $iiip = $request->ip;
+
+        if ($request->time) {
+            $time = $request->get('time');
+        } else {
+            $time = 5;
+        }
+
+        $subscriber = $request->username;
+        $serveriid = Server::find($iid);
+
+        if (!$serveriid) {
+            abort(404, 'Server not found');
+        }
+
+        $ip = $serveriid->mip;
+        $user = $serveriid->username;
+        $password = $serveriid->password;
+        $sname = $serveriid->name;
+
+        $API = new LegacyRouterosAPI();
+        $API->debug = false;
+
+        activity()->causedBy(Auth::user())->useLog('Ping')->log('Check for user ' . $subscriber . ' for ' . $time . ' of ' . $sname);
+
+        if ($API->connect($ip, $user, $password)) {
+            $PING = $API->comm('/ping', [
+                'address' => $iiip,
+                'count' => $time,
+            ]);
+
+            $API->disconnect();
+
+            return view('PPPoE.pingnew', compact('title', 'iid', 'iiip', 'sname', 'subscriber', 'time', 'PING'));
+        }
+
+        return view('PPPoE.pingnew', compact('title', 'iid', 'iiip', 'sname', 'subscriber', 'time'));
     }
 
 

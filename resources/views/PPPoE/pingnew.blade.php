@@ -9,26 +9,27 @@
 
 @endphp
 
-
-@extends('admin.layouts.header')
-
-<x-assets.datatables />
-
-@push('page-css')
-
-@endpush
-
-@push('page-header')
-<div class="col-sm-7 col-auto">
-	<h3 class="page-title">Ping Result</h3>
-	<ul class="breadcrumb">
-		<li class="breadcrumb-item"><a href="{{route('dashboard')}}">Dashboard</a></li>
-		<li class="breadcrumb-item active">Ping Result</li>
-	</ul>
-</div>
-@endpush
+@extends('layouts.admin')
 
 @section('content')
+
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-3">Ping Result</h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb breadcrumb-style1">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="breadcrumb-item active">Ping Result</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
 <div class="row">
     <div class="col-md-12">
       <div class="card">
@@ -65,87 +66,114 @@
                 </form>
             </div>
         </div>
-          {{-- <table class="table-striped">
-            <tr><th>Sr. No. </th><th>Result</th></tr>
-            @foreach ($PING as $resdd )
-            <tr>
-                <td>{{ $loop->iteration }}</td>
+          <table class="table table-striped table-bordered mt-3">
+            <thead class="thead-dark">
+                <tr><th>Sr. No.</th><th>Result</th></tr>
+            </thead>
+            <tbody>
+            @if (isset($PING) && is_array($PING) && count($PING) > 0)
+                @foreach ($PING as $resdd)
+                <tr>
+                    <td>{{ $loop->iteration }}</td>
+                    @php
+                        $packetLoss = $resdd['packet-loss'] ?? $resdd['packet_loss'] ?? $resdd['packetloss'] ?? null;
+                        $pingTime = $resdd['time'] ?? null;
+                        $resultText = $pingTime ?: 'No response';
 
-                @if ($resdd['packet-loss']==0)
-                    <td>{{ $resdd['time'] }}</td>
-                @else
-                    <td>Packet Loss</td>
-                @endif
-
-
-            </tr>
-            @endforeach
-          </table> --}}
+                        if (is_string($resultText) && preg_match('/^\d+(?:\.\d+)?\s*ms$/i', trim($resultText))) {
+                            $resultText = trim($resultText);
+                        } elseif (is_numeric((string) $resultText)) {
+                            $resultText = (string) $resultText . ' ms';
+                        }
+                    @endphp
+                    @if ($pingTime !== null && $pingTime !== '')
+                        <td>{{ $resultText }} ms</td>
+                    @elseif ($packetLoss === null || $packetLoss === '' || (is_numeric((string) $packetLoss) && (float) $packetLoss === 0))
+                        <td>{{ $resultText }}</td>
+                    @else
+                        <td><strong class="text-danger">Packet Loss</strong></td>
+                    @endif
+                </tr>
+                @endforeach
+            @else
+                <tr>
+                    <td colspan="2" class="text-center text-muted">No ping result returned.</td>
+                </tr>
+            @endif
+            </tbody>
+          </table>
 		<!-- /pingResult -->
 	</div>
 </div>
-<div class="container mt-2"> 
-    <div class="table-responsive">
-        <table id="ping-results" class="table table-striped table-bordered"> 
-            <thead class="thead-dark"> 
-                <tr> 
-                    <th scope="col">SR NO</th> 
-                    <th scope="col">Result</th> 
-                </tr> 
-            </thead> 
-            <tbody> 
-            </tbody>
-        </table>
-    </div>
+<div class="mt-3 mb-3">
+    <a href="javascript: history.back()" class="btn btn-primary btn-sm">Back</a>
 </div>
-<a href='javascript: history.back()' class="btn btn-primary btn-sm">Back</a>
     </div>
 </div>
 {{-- <script src="https://js.pusher.com/7.0/pusher.min.js"></script> 
 <script src="{{ asset('js/app.js') }}"></script> 
 <script src="http://192.168.1.66/microtik-radius/public{{ mix('js/app.js') }}" defer></script> --}}
-<script> 
+<script>
     console.log("Initializing EventSource");
 
-    if (!!window.EventSource) { 
-        const source = new EventSource("/microtik-radius/public/pppoe/real-time-ping?server={{ $iid }}&time={{ $time }}&ip={{ $iiip }}&username={{ $subscriber }}"); 
+    if (!!window.EventSource) {
+        const sourceUrl = "{{ url('pppoe/real-time-ping') }}?server={{ urlencode((string) $iid) }}&time={{ urlencode((string) $time) }}&ip={{ urlencode((string) $iiip) }}&username={{ urlencode((string) $subscriber) }}";
+        const source = new EventSource(sourceUrl);
         let serialNumber = 1;
 
-        source.onopen = function() { 
-            console.log("EventSource connection established"); 
+        source.onopen = function() {
+            console.log("EventSource connection established");
         };
 
-        source.onmessage = function(event) { 
+        source.onmessage = function(event) {
             console.log("Data received:", event.data);
-            const data = JSON.parse(event.data); 
-            // document.getElementById('ping-results').innerHTML = JSON.stringify(data, null, 2); 
 
-            // Append new data to the ping-results table 
-            const pingResultsTable = document.getElementById('ping-results').getElementsByTagName('tbody')[0]; 
-            const newRow = pingResultsTable.insertRow(); 
-            newRow.insertCell(0).textContent = serialNumber++;
-            // newRow.insertCell(1).textContent = data[0].time; 
-        
-            const packetLossCell = newRow.insertCell(1); 
-            if (data[0]['packet-loss'] === '0') { 
-                
-                packetLossCell.textContent = data[0].time;
-            } else { 
-                packetLossCell.innerHTML = '<strong class="text-danger">Packet Loss</strong>';
-                // packetLossCell.textContent = 'Packet Loss'; 
-                // packetLossCell.classList.add('text-danger'); 
+            let parsed = null;
+            try {
+                parsed = JSON.parse(event.data);
+            } catch (error) {
+                console.warn('Non-JSON ping payload:', event.data);
+                parsed = { raw: event.data };
             }
-        }; 
-        source.onerror = function(event) { 
+
+            const data = Array.isArray(parsed) ? parsed[0] : parsed;
+            const row = data && typeof data === 'object' ? data : { raw: parsed };
+            const packetLoss = row['packet-loss'] ?? row.packet_loss ?? row.packetloss ?? null;
+            const pingTime = row.time ?? row['time'] ?? null;
+
+            const pingResultsTable = document.getElementById('ping-results').getElementsByTagName('tbody')[0];
+            const newRow = pingResultsTable.insertRow();
+            newRow.insertCell(0).textContent = serialNumber++;
+
+            const packetLossCell = newRow.insertCell(1);
+            const packetValue = String(packetLoss ?? '').replace('%', '').trim();
+
+            if (pingTime !== null && pingTime !== undefined && pingTime !== '') {
+                const pingText = typeof pingTime === 'string' && pingTime.toLowerCase().includes('ms')
+                    ? pingTime
+                    : (String(pingTime).trim() + ' ms');
+                packetLossCell.textContent = pingText;
+            } else if (packetLoss === null || packetLoss === undefined || packetLoss === '') {
+                packetLossCell.textContent = 'No response';
+            } else if (packetValue === '0' || Number(packetValue) === 0) {
+                packetLossCell.textContent = '0 ms';
+            } else if (typeof packetLoss === 'string' && packetLoss.toLowerCase().includes('loss')) {
+                packetLossCell.innerHTML = '<strong class="text-danger">Packet Loss</strong>';
+            } else {
+                packetLossCell.textContent = String(packetLoss) + ' %';
+            }
+        };
+
+        source.onerror = function(event) {
             console.error("EventSource failed:", event);
-            source.close();
-        }; 
-    } else { 
-        console.error("Your browser doesn't support SSE"); 
+            console.log("Keeping the stream open so browser can retry automatically.");
+        };
+    } else {
+        console.error("Your browser doesn't support SSE");
     }
 </script>
-<script src="{{ mix('js/app.js') }}">
+{{-- <script src="{{ mix('js/app.js') }}"> --}}
+
+
+</div>
 @endsection
-
-
-

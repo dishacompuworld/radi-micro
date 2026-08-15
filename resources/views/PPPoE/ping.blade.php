@@ -92,34 +92,43 @@
 {{-- <script src="https://js.pusher.com/7.0/pusher.min.js"></script> 
 <script src="{{ asset('js/app.js') }}"></script> 
 <script src="http://192.168.1.66/microtik-radius/public{{ mix('js/app.js') }}" defer></script> --}}
-<script> 
+<script>
     console.log("Initializing EventSource");
 
-    if (!!window.EventSource) { 
-        const eventSourceUrl = '/microtik-radius/public/pppoe/real-time-ping?server=${server}&time=${time}&ip=${ip}&username=${username}';
-        const source = new EventSource("/microtik-radius/public/pppoe/real-time-ping?server={{ $iid }}&time={{ $time1 }}&ip={{ $iiip }}&username={{ $subscriber }}"); 
+    if (!!window.EventSource) {
+        const sourceUrl = "{{ url('pppoe/real-time-ping') }}?server={{ urlencode((string) $iid) }}&time={{ urlencode((string) $time1) }}&ip={{ urlencode((string) $iiip) }}&username={{ urlencode((string) $subscriber) }}";
+        const source = new EventSource(sourceUrl);
 
-        source.onopen = function() { 
-            console.log("EventSource connection established"); 
+        source.onopen = function() {
+            console.log("EventSource connection established");
         };
 
-        source.onmessage = function(event) { 
+        source.onmessage = function(event) {
             console.log("Data received:", event.data);
-            const data = JSON.parse(event.data); 
-            // document.getElementById('ping-results').innerHTML = JSON.stringify(data, null, 2); 
 
-            // Append new data to the ping-results div 
-            const pingResultsDiv = document.getElementById('ping-results'); 
-            const newData = document.createElement('div'); 
-            newData.textContent = JSON.stringify(data, null, 2); 
-            pingResultsDiv.appendChild(newData);
-        }; 
-        source.onerror = function(event) { 
+            try {
+                const data = JSON.parse(event.data);
+                const row = Array.isArray(data) ? data[0] : data;
+                const packetLoss = row && (row['packet-loss'] ?? row.packet_loss ?? row.packetloss ?? null);
+                const pingTime = row && (row.time ?? row['time'] ?? 'No data');
+
+                const pingResultsDiv = document.getElementById('ping-results');
+                const newData = document.createElement('div');
+                newData.textContent = Number(packetLoss) === 0 || String(packetLoss).trim() === '0'
+                    ? 'Ping OK: ' + pingTime
+                    : 'Packet Loss';
+                pingResultsDiv.appendChild(newData);
+            } catch (error) {
+                console.error('Failed to parse ping payload:', error);
+            }
+        };
+
+        source.onerror = function(event) {
             console.error("EventSource failed:", event);
             source.close();
-        }; 
-    } else { 
-        console.error("Your browser doesn't support SSE"); 
+        };
+    } else {
+        console.error("Your browser doesn't support SSE");
     }
 </script>
 {{-- <script src="http://192.168.1.66/microtik-radius/public{{ mix('js/app.js') }}"> --}}
