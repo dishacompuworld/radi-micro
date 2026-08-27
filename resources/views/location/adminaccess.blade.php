@@ -86,7 +86,7 @@
 
         // Get the search parameter from the URL and set the search box value 
         // let searchParam = getParameterByName('search');
-        let searchParam = getParameterByName('search') || '';
+        let searchParam = getParameterByName('name') || getParameterByName('search') || '';
         // let searchParam = {{ $search }};
 
         $('#searchBox').val(searchParam); 

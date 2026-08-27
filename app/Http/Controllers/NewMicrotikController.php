@@ -1622,6 +1622,17 @@ class NewMicrotikController extends Controller
 
                 // Log::info('System History: ' . json_encode($systemHistory));
 
+                if (empty($systemHistory)) {
+                    return response()->json(['error' => 'No history data was returned by the MikroTik router'], 502);
+                }
+
+                $systemHistory = array_map(function ($item) {
+                    return [
+                        'action' => trim((string) ($item['action'] ?? $item['redo'] ?? $item['command'] ?? 'Not available')),
+                        'time' => $item['time'] ?? $item['date'] ?? $item['timestamp'] ?? null,
+                    ];
+                }, $systemHistory);
+
                 return response()->json($systemHistory);
             } else {
                 Log::error('Failed to connect to the MikroTik router.');

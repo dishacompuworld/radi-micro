@@ -12,38 +12,50 @@
 
             <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
               <!-- Search -->
+              @php
+                  $optionselect = request()->query('optionselect', '');
+                  $searchvalue = request()->query('search', request()->query('name', ''));
+              @endphp
               <div class="navbar-nav align-items-center me-auto">
-                <div class="nav-item d-flex align-items-center">
+                <form class="nav-item d-flex align-items-center" onsubmit="return setFormAction(event)" method="get" id="navbar-search-form" action="{{ url('/pppoe/allactivenew') }}">
                   <i class="bx bx-search fs-4 lh-0"></i>
-                  <li class="nav-item dropdown">
-                        <a
-                          class="nav-link dropdown-toggle"
-                          href="javascript:void(0)"
-                          id="navbarDropdown"
-                          role="button"
-                          data-bs-toggle="dropdown"
-                          aria-expanded="false"
-                        >
-                          Microtik Users
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                          <li><a class="dropdown-item" href="javascript:void(0)">Microtik Users</a></li>
-                          <li><a class="dropdown-item" href="javascript:void(0)">Radius Users</a></li>
-                          <li><a class="dropdown-item" href="javascript:void(0)">Admin Access Requests</a></li>
-                          <li>
-                            <hr class="dropdown-divider" />
-                          </li>
-                          <li><a class="dropdown-item" href="javascript:void(0)">Optical Power</a></li>
-                        </ul>
-                      </li>
+                  <select id="optionselect" class="form-select border-0 shadow-none" aria-label="Search category">
+                    <option value="{{ url('/pppoe/allactivenew') }}" data-option="allactivenew" @selected($optionselect === 'allactivenew' || $optionselect === '')>Microtik</option>
+                    <option value="{{ url('/searchsubscriberall') }}" data-option="searchsubscriberall" @selected($optionselect === 'searchsubscriberall')>Radius</option>
+                    <option value="{{ url('/showopticalpowers') }}" data-option="showopticalpowers" @selected($optionselect === 'showopticalpowers')>Optical Power</option>
+                    @can('view-admin-radius-logs')
+                      <option value="{{ url('/adminaccessrequest') }}" data-option="adminaccessrequest" @selected($optionselect === 'adminaccessrequest')>Access Requests</option>
+                    @endcan
+                  </select>
                   <input
-                    type="text"
+                    type="search"
                     class="form-control border-0 shadow-none"
                     placeholder="Search..."
                     aria-label="Search..."
+                    id="search"
+                    name="name"
+                    value="{{ $searchvalue }}"
                   />
-                </div>
+                  <input type="hidden" name="optionselect" id="navbar-optionselect" value="{{ $optionselect ?: 'allactivenew' }}" />
+                  <input type="hidden" name="checked" id="navbar-checked" value="1" />
+                </form>
               </div>
+              <script>
+                function setFormAction(event) {
+                  event.preventDefault();
+
+                  const form = event.currentTarget;
+                  const selector = form.querySelector('#optionselect');
+                  const selectedOption = selector.options[selector.selectedIndex];
+
+                  form.action = selectedOption.value;
+                  form.querySelector('#navbar-optionselect').value = selectedOption.dataset.option;
+                  form.querySelector('#navbar-checked').disabled = selectedOption.dataset.option !== 'allactivenew';
+                  form.submit();
+
+                  return false;
+                }
+              </script>
               <!-- /Search -->
 
               <!-- mseb container -->

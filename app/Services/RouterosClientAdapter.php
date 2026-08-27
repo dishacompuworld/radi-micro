@@ -35,19 +35,19 @@ class RouterosClientAdapter
             return [];
         }
 
-        $q = $this->client->query($com);
-        foreach ($arr as $k => $v) {
-            $key = ltrim((string)$k, "=?");
-            if (method_exists($q, 'equal')) {
-                $val = $v === true ? '' : $v;
-                $q->equal($key, $val);
-            }
-        }
-
         $attempts = 0;
         $maxAttempts = 3;
         while ($attempts < $maxAttempts) {
             try {
+                $q = $this->client->query($com);
+                foreach ($arr as $k => $v) {
+                    $key = ltrim((string)$k, "=?");
+                    if (method_exists($q, 'equal')) {
+                        $val = $v === true ? '' : $v;
+                        $q->equal($key, $val);
+                    }
+                }
+
                 $result = $q->read();
                 return $result;
             } catch (\RouterOS\Exceptions\StreamException $e) {

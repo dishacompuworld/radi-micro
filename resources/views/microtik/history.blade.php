@@ -58,6 +58,83 @@
 </div>
 
 <script>
+    function formatHistoryTime(value) {
+        if (!value) {
+            return 'Not available';
+        }
+
+        const parsedDate = new Date(value);
+        if (!Number.isNaN(parsedDate.getTime())) {
+            return parsedDate.toLocaleString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+                day: 'numeric'
+            });
+        }
+
+        const routerOsDate = String(value).match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/i);
+        if (routerOsDate) {
+            const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            const month = months.indexOf(routerOsDate[1].toLowerCase());
+            const year = Number(routerOsDate[3]) < 100 ? 2000 + Number(routerOsDate[3]) : Number(routerOsDate[3]);
+            const date = new Date(
+                year,
+                month,
+                Number(routerOsDate[2]),
+                Number(routerOsDate[4]),
+                Number(routerOsDate[5]),
+                Number(routerOsDate[6] || 0)
+            );
+
+            return date.toLocaleString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+                day: 'numeric'
+            });
+        }
+
+        return String(value);
+    }
+
+    function getHistoryValue(item, keys) {
+        for (const key of keys) {
+            if (item[key] !== undefined && item[key] !== null && item[key] !== '') {
+                return item[key];
+            }
+        }
+
+        const normalizedKeys = keys.map(key => key.replace(/^=/, '').toLowerCase());
+        for (const [key, value] of Object.entries(item)) {
+            if (normalizedKeys.includes(key.replace(/^=/, '').toLowerCase()) && value !== null && value !== '') {
+                return value;
+            }
+        }
+
+        if (keys.includes('time')) {
+            for (const [key, value] of Object.entries(item)) {
+                if (/(time|date|when|created)/i.test(key) && value !== null && value !== '') {
+                    return value;
+                }
+            }
+
+            for (const value of Object.values(item)) {
+                if (typeof value === 'string' && /^(?:\d{4}-\d{2}-\d{2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\/\d{1,2}\/\d{2,4})/i.test(value)) {
+                    return value;
+                }
+            }
+        }
+
+        return '';
+    }
+
     function fetchHistory() {
         const serverId = document.getElementById('server-select').value;
         if (!serverId) {
@@ -66,7 +143,12 @@
         }
 
         fetch(`systemhistory?sserver=${serverId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Unable to load history (${response.status})`);
+                }
+                return response.json();
+            })
             .then(data => {
                 const container = document.getElementById('history-container');
                 container.innerHTML = ''; // Clear existing data
@@ -92,10 +174,12 @@
                     // Create table rows
                     data.forEach((item, index) => {
                         const row = document.createElement('tr');
+                        const action = getHistoryValue(item, ['action', '=action', 'command', 'cmd', 'message', 'description', 'name', 'type', 'redo', 'undo']) || 'Not available';
+                        const time = getHistoryValue(item, ['time', '=time', 'date', 'timestamp', 'when']);
                         row.innerHTML = `
                             <td>${index + 1}</td>
-                            <td>${item.action}</td>
-                            <td>${new Date(item.time).toLocaleString('en-US', { weekday: 'short', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, day: 'numeric' })}</td>`;
+                            <td>${action}</td>
+                            <td>${formatHistoryTime(time)}</td>`;
                         tbody.appendChild(row);
                     });
 
@@ -104,11 +188,13 @@
                     container.appendChild(table);
                 }
             })
-            .catch(error => console.error('Error fetching IP neighbors:', error));
+            .catch(error => {
+                document.getElementById('history-container').innerHTML = `<p>${error.message}</p>`;
+                console.error('Error fetching system history:', error);
+            });
     }
 
-    // Initial fetch
-    fetchIpNeighbors();
+    fetchHistory();
 </script>
 
 </div>

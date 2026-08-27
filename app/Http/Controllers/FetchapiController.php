@@ -644,15 +644,24 @@ class FetchapiController extends Controller
         $this->login();
         $tokan = session()->get('tokan');
         $title = "Admin Radius-Access Logs";
+        $search = $request->input('search.value', $request->input('name', ''));
 
         if($request->ajax()){
+
+            $payload = [
+                'columns' => [
+                    '3' => ['search' => ['value' => $search]],
+                ],
+                'start' => '0',
+                'length' => '100',
+            ];
 
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'Version' => 'HTTP/1.0',
                 'Accept' => 'application/json',
                 'Authentication' => $tokan
-            ])->post('https://admin.xceednet.com/operator_subscriber_access_requests/search',['start'=> '0', 'length'=> '100']);
+            ])->post('https://admin.xceednet.com/operator_subscriber_access_requests/search', $payload);
 
             return DataTables::of($response['data'])
                     ->addIndexColumn()

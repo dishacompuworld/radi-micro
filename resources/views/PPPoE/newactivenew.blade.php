@@ -128,10 +128,10 @@
                 },
                 {data: 'newmac',name: 'newmac', orderable: false,},
                 {data: 'addressnew',name: 'addressnew'},
-                {data: 'uptime', name: 'uptime', searchable: false},
+                {data: 'uptime', name: 'time', searchable: false},
                 {data: 'remove', name: 'remove', orderable: false, searchable: false},
             ],
-            aaSorting: [],
+            order: [[4, 'asc']],
             // "initComplete": function () {
             //     this.api().search(getParam()).draw();
             // });
@@ -142,22 +142,36 @@
 @elseif ($checked=="1")
 <script>
     $(document).ready(function() {
+        let initialSearchApplied = false;
+
         var table = $('#pppoe-active').DataTable({
             processing: true,
             serverSide: true,
-            ajax: "{{ route('pppoe.allactivenew') }}",
+            ajax: {
+                url: "{{ route('pppoe.allactivenew') }}",
+                data: function (data) {
+                    const searchParam = new URLSearchParams(window.location.search).get('name') || '';
+                    if (searchParam && !initialSearchApplied && !data.search.value) {
+                        data.search.value = searchParam;
+                        initialSearchApplied = true;
+                    }
+                }
+            },
             columns: [
                 {data: 'server', name: 'server'},
-                {data: 'namel', name: 'namel'},
+                {data: 'namel', name: 'name'},
                 {data: 'ping', name: 'ping', searchable: false, orderable: false,},
                 {data: 'newmac',name: 'newmac', orderable: false,},
                 {data: 'addressnew',name: 'addressnew'},
-                {data: 'time', name: 'time', searchable: false, visible:false},
-                {data: 'newuptime', name: 'newuptime', searchable: false, orderable: false},
+                {data: 'newuptime', name: 'time', searchable: false},
                 {data: 'remove', name: 'remove', searchable: false, orderable: false,},
                 // {data: 'remove', name: 'remove', orderable: false, searchable: false},
             ],
-            order: [],
+            order: [[5, 'asc']],
+            initComplete: function () {
+                const searchParam = new URLSearchParams(window.location.search).get('name') || '';
+                $(this.api().table().container()).find('input[type="search"]').val(searchParam);
+            },
         });
 
         //Add tooltip to specific column
@@ -244,7 +258,7 @@
         
         // Get the search parameter from the URL and set the search box value 
         // let searchParam = getParameterByName('search');
-        let searchParam = getParameterByName('search') || '';
+        let searchParam = getParameterByName('name') || getParameterByName('search') || '';
         // let searchParam = {{ $search }};
 
         $('#searchBox').val(searchParam); 

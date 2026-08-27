@@ -390,6 +390,7 @@ class PPPoEUserController extends Controller
         $servers = Server::where('enable', '1')->get();
         $checked = $request->boolean('checked') ? 1 : 0;
         $search = $request->get('name');
+        $dataTableSearch = trim((string) $request->input('search.value', ''));
 
         $isDataTableRequest = $request->ajax()
             || $request->hasAny(['draw', 'columns', 'order', 'start', 'length', 'search'])
@@ -469,6 +470,12 @@ class PPPoEUserController extends Controller
             }
 
             // $finalarray = array_reverse($finalarray);
+            if ($dataTableSearch !== '') {
+                $searchTerm = strtolower($dataTableSearch);
+                $finalarray = array_values(array_filter($finalarray, function ($row) use ($searchTerm) {
+                    return str_contains(strtolower((string) ($row['name'] ?? '')), $searchTerm);
+                }));
+            }
 
             return DataTables::of($finalarray)
                 ->addIndexColumn()
