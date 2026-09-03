@@ -37,6 +37,7 @@
         align-items: center;
         justify-content: flex-end;
         gap: 0.5rem;
+        flex-wrap: wrap;
     }
 
     .mseb-container {
@@ -46,7 +47,8 @@
         padding: 0.4rem 0.75rem; /* Reduced padding for a more compact look */
         border: 1px solid rgba(255, 255, 255, 0.2);
         min-width: 150px; /* Give it a minimum width to prevent squishing */
-        height: 40px;
+        min-height: 40px;
+        height: auto;
     }
 
     /* Target the text elements specifically inside the MSEB container */
@@ -66,13 +68,147 @@
         padding: 0.4rem 0.75rem; /* Reduced padding for a more compact look */
         border: 1px solid rgba(255, 255, 255, 0.2);
         min-width: 150px; /* Give it a minimum width to prevent squishing */
-        height: 40px;
+        min-height: 40px;
+        height: auto;
     }
 
     /* Target the text elements specifically inside the MSEB container */
     .temp-container span {
         font-size: 0.8rem !important; /* Smaller font for the "MSEB Status" label */
         font-weight: 600 !important;
+    }
+
+    .navbar-search-nav {
+        min-width: 0;
+        align-self: center;
+    }
+
+    #navbar-search-form {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        width: 100%;
+        min-width: 0;
+        height: 2.375rem;
+        align-self: center;
+    }
+
+    #navbar-search-form select,
+    #navbar-search-form input[type="search"] {
+        height: 2.375rem;
+        margin-top: 0;
+        margin-bottom: 0;
+        align-self: center;
+    }
+
+    #navbar-search-form > .bx-search {
+        flex: 0 0 1.25rem;
+        text-align: center;
+    }
+
+    #navbar-search-form select {
+        flex: 0 0 8.5rem;
+        width: 8.5rem;
+        min-width: 0;
+        padding-right: 1.75rem;
+    }
+
+    #navbar-search-form input[type="search"] {
+        flex: 1 1 auto;
+        width: 1%;
+        min-width: 0;
+    }
+
+    @media (max-width: 1199.98px) {
+        #layout-navbar {
+            align-items: center;
+        }
+
+        #navbar-collapse {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.5rem;
+        }
+
+        #navbar-collapse > .navbar-nav:first-of-type {
+            grid-column: 1 / -1;
+            min-width: 0;
+            margin-right: 0 !important;
+            align-self: center;
+        }
+
+        #navbar-search-form {
+            width: 100%;
+            min-width: 0;
+            flex-wrap: nowrap;
+        }
+
+        #navbar-search-form select {
+            flex: 0 1 42%;
+            width: auto;
+            max-width: 42%;
+        }
+
+        #navbar-search-form input[type="search"] {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        #navbar-collapse > .user-menu {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-column: 1;
+            gap: 0.5rem;
+            min-width: 0;
+            margin-right: 0 !important;
+        }
+
+        #navbar-collapse > .navbar-status-menu {
+            display: none;
+        }
+
+        .user-menu .nav-item {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .temp-container,
+        .mseb-container {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .temp-container .d-flex,
+        .mseb-container .d-flex {
+            flex-wrap: wrap;
+            gap: 0.25rem 0.5rem;
+        }
+
+        #mseb-uptime {
+            overflow-wrap: anywhere;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        #layout-navbar {
+            padding: 0.75rem;
+        }
+
+        #navbar-search-form select {
+            max-width: 45%;
+        }
+
+        #navbar-collapse {
+            grid-template-columns: 1fr;
+        }
+
+        #navbar-collapse > .user-menu {
+            grid-column: 1;
+        }
+
+        .user-menu .nav-item {
+            width: 100%;
+        }
     }
 
 </style>

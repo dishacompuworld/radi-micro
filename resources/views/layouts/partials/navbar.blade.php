@@ -16,7 +16,7 @@
                   $optionselect = request()->query('optionselect', '');
                   $searchvalue = request()->query('search', request()->query('name', ''));
               @endphp
-              <div class="navbar-nav align-items-center me-auto">
+              <div class="navbar-nav navbar-search-nav align-items-center me-auto flex-grow-1">
                 <form class="nav-item d-flex align-items-center" onsubmit="return setFormAction(event)" method="get" id="navbar-search-form" action="{{ url('/pppoe/allactivenew') }}">
                   <i class="bx bx-search fs-4 lh-0"></i>
                   <select id="optionselect" class="form-select border-0 shadow-none" aria-label="Search category">
@@ -59,12 +59,12 @@
               <!-- /Search -->
 
               <!-- mseb container -->
-              <ul class="nav user-menu me-2">
+              <ul class="nav user-menu navbar-status-menu me-2">
                 <li class="nav-item">
                   <div class="temp-container {{ $bgClass ?? '' }}" id="temp-container">
                             <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="text-white-50">Main Server Temp.&nbsp;</span>
-                      <span class="text-white mb-0 fw-bold" id="temp-text">{{ '0°C'}}</span>
+                                <span class="text-white-50">Main Server Temp.</span>
+                      <span class="text-white mb-0 fw-bold text-nowrap" id="temp-text">{{ '0°C'}}</span>
                     </div>
                   </div>
                   <script>
@@ -125,8 +125,8 @@
                 <li class="nav-item">
                         <div class="mseb-container {{ $bgClass ?? '' }}" id="mseb-container">
                             <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="text-white-50">MSEB &nbsp;</span>
-                      <h6 class="text-white mb-0" id="mseb-text">{{ $mseb ?? 'N/A' }}</h6>&nbsp;
+                                <span class="text-white-50">MSEB&nbsp;</span>
+                      <h6 class="text-white mb-0 text-nowrap" id="mseb-text">{{ $mseb ?? 'N/A' }}</h6>&nbsp;
                       <span class="text-white-50 mb-0 fw-bold" id="mseb-uptime">Since {{ $updowntime ?? '...' }}</span>
                     </div>
                   </div>
@@ -183,7 +183,7 @@
 
               <!-- /mseb container -->
                 
-              <ul class="navbar-nav flex-row align-items-center">
+              <ul class="navbar-nav flex-row align-items-center" id="navbar-account-nav">
                 <!-- Place this tag where you want the button to render. -->
 
                 <!-- User -->

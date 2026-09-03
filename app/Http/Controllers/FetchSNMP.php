@@ -1082,6 +1082,52 @@ class FetchSNMP extends Controller
         }
     }
 
+
+    public function addontapi(Request $request){
+        $title = "Add ONT to Database";
+        $msg = "";
+        $type = "";
+        // $optdata = DB::table('opticalpowers')->get();
+        try{
+            if($request->oid){
+                $insert = DB::table('opticalpowers')
+                ->insert([
+                    'oid' => $request->oid,
+                    'updated_at'=>date('Y-m-d H:i:s')
+                ]);
+
+                if($insert){
+                    // $msg = "New OID(" . $request->oid .") Added";
+                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('add.ont.success');
+                    $msg = str_replace(':oid', $request->oid, $alertMessage->message);
+                    $type = $alertMessage->type;
+                }else{
+                    // $msg = "OID not added";
+                    $alertMessage = app('App\Http\Controllers\AlertMessageController')->get('add.ont.error');
+                    $msg = $alertMessage->message;
+                    $type = $alertMessage->type;
+                }
+
+                activity()->causedBy(auth()->user())->useLog('Add OID - api')->log($msg);
+            }
+        }
+        catch(Exception $e)
+        {
+            if ($e->getMessage()){
+                $msg = $e->getMessage();
+                $type = 'error';
+                activity()->causedBy(auth()->user())->useLog('Add OID - api')->log($msg);
+            }
+        }
+        if($type == 'success'){
+            session()->flash('success', $msg);
+            return view('snmp.addont', compact('title'));
+        }else{
+            session()->flash('error', $msg);
+            return view('snmp.addont', compact('title'));
+        }
+    }
+
     /**
      * Reboot ONT via SNMP
      * @param Request $request

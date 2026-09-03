@@ -219,4 +219,77 @@ class DashboardController extends Controller
         return response()->json($data);
         
     }
+
+
+    public function dashboardapi(){
+        // $title = 'Dashboard';
+
+        
+        $total_servers = Server::where('enable', 1)->count();
+        $total_locations = Location::where('enable', 1)->count();
+
+        $userss = 0;
+        $servers = Server::where('enable','1')->get();
+
+        // app('App\Http\Controllers\PrtgApiController')->getfirstchart();
+        // app('App\Http\Controllers\PrtgApiController')->getsecondchart();
+
+        $totalactiveuserc = app('App\Http\Controllers\FetchapiController')->allactiveusers();
+
+        $upsensorcount =app('App\Http\Controllers\PrtgApiController')->upsensors();
+        $downsensorcount =app('App\Http\Controllers\PrtgApiController')->downsensors();
+        $totalsensorcount =app('App\Http\Controllers\PrtgApiController')->totalsensors();
+        $msebstatus = app('App\Http\Controllers\PrtgApiController')->getMsebStatusDataapi();
+        $temp = app('App\Http\Controllers\PrtgApiController')->getTempInfoAjax();
+        $disabledsubscribers = app('App\Http\Controllers\FetchapiController')->getdisablesubscribers();
+        //$this->getTempInfoAjax();
+        
+
+        $totalont = DB::table('opticalpowers')->count();
+
+        foreach($servers as $server){
+
+            $ip = $server->mip;
+            $user = $server->username;
+            $password = $server->password;
+
+            $API = new RouterosAPI();
+            $API->debug = false;
+
+            if ($API->connect($ip, $user, $password)) {
+
+                $username = auth()->user()->name; // Get the logged-in username
+
+                // Log the username to MikroTik
+                $API->write('/log/error', false);
+                $API->write('=message=User ' . $username . ' logged to ' . env('APP_NAME') . ' - API', true);
+                $API->read();
+
+                $activeuserss = $API->comm('/ppp/active/print');
+
+                $userss = $userss + count($activeuserss);
+
+            }
+        }
+        $msg = 'Dashboard Viewed';
+        activity()->causedBy(auth()->user())->useLog('Dashboard - API')->log($msg);
+        // return $msebstatus;
+        // return view('admin.dashboard',compact('title','userss','total_servers','total_locations','upsensorcount','downsensorcount','totalsensorcount','totalactiveuserc'));
+        return response()->json([
+            'users' => $userss,
+            'totalservers' => $total_servers,
+            'totallocations' => $total_locations,
+            'upsensorcount' => $upsensorcount,
+            'downsensorcount' => $downsensorcount,
+            'totalsensorcount' => $totalsensorcount,
+            'totalactiveuserc' => $totalactiveuserc,
+            'totalont' => $totalont,
+            'msebstatus' => $msebstatus['status'],
+            'msebuptime' => $msebstatus['uptime'],
+            'msebdowntime' => $msebstatus['downtime'],
+            'mesbsuccess' => $msebstatus['success'],
+            'temp' => $temp->original['value'] ?? 'N/A',
+            'disabledsubscribers' => $disabledsubscribers
+        ]);
+    }
 }
