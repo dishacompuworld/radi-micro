@@ -1,3 +1,9 @@
+@php
+  $userNotifications = auth()->user()->notifications()->latest()->limit(20)->get();
+  $totalNotificationCount = auth()->user()->notifications()->count();
+  $unreadNotificationCount = auth()->user()->unreadNotifications()->count();
+@endphp
+
 <!-- Navbar -->
 
           <nav
@@ -39,7 +45,6 @@
                   <input type="hidden" name="optionselect" id="navbar-optionselect" value="{{ $optionselect ?: 'allactivenew' }}" />
                   <input type="hidden" name="checked" id="navbar-checked" value="1" />
                 </form>
-              </div>
               <script>
                 function setFormAction(event) {
                   event.preventDefault();
@@ -182,6 +187,55 @@
               </ul>
 
               <!-- /mseb container -->
+
+              <ul class="navbar-nav flex-row align-items-center me-2">
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" aria-label="Notifications">
+                    <i class="bx bx-bell bx-sm"></i>
+                    @if($unreadNotificationCount > 0)
+                      <span class="badge bg-danger notification-badge">{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
+                    @endif
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-end notification-menu">
+                    <li class="px-3 py-2 d-flex justify-content-between align-items-center">
+                      <span class="fw-semibold">Notifications ({{ $totalNotificationCount }})</span>
+                      @if($unreadNotificationCount > 0)
+                        <span class="d-flex align-items-center gap-2">
+                          <span class="small text-primary">{{ $unreadNotificationCount }} unread</span>
+                          <form method="POST" action="{{ route('notifications.read-all') }}">
+                            @csrf
+                            <button type="submit" class="btn btn-link btn-sm p-0">Mark all read</button>
+                          </form>
+                        </span>
+                      @endif
+                    </li>
+                    <li><div class="dropdown-divider my-0"></div></li>
+                    @forelse($userNotifications as $notification)
+                      @php
+                          $data = $notification->data;
+                          $status = $data['status'] ?? 'Alert';
+                          $device = $data['device'] ?? 'Unknown device';
+                          $sensor = $data['sensor'] ?? 'Unknown sensor';
+                          $message = $data['message'] ?? '';
+                      @endphp
+                      <li>
+                        <a class="dropdown-item notification-item {{ $notification->read_at ? '' : 'notification-unread' }}" href="{{ route('notifications.read', $notification) }}">
+                          <div class="d-flex gap-2">
+                            <i class="bx {{ $notification->read_at ? 'bx-envelope-open' : 'bx-error-circle' }} text-{{ strtolower($status) === 'up' ? 'success' : 'danger' }} fs-5 mt-1"></i>
+                            <div class="min-width-0">
+                              <div class="fw-semibold text-truncate">{{ $status }}: {{ $device }}</div>
+                              <div class="small text-muted text-truncate">{{ $sensor }}{{ $message ? ' - '.$message : '' }}</div>
+                              <div class="small text-muted">{{ $notification->created_at->diffForHumans() }} · {{ $notification->read_at ? 'Read' : 'Unread' }}</div>
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                    @empty
+                      <li><span class="dropdown-item-text text-muted">No notifications</span></li>
+                    @endforelse
+                  </ul>
+                </li>
+              </ul>
                 
               <ul class="navbar-nav flex-row align-items-center" id="navbar-account-nav">
                 <!-- Place this tag where you want the button to render. -->
@@ -228,11 +282,13 @@
                     </li>
                     @endcan
                     <li>
-                      <a class="dropdown-item" href="#">
+                      <a class="dropdown-item" href="{{ route('notifications.index') }}">
                         <span class="d-flex align-items-center align-middle">
-                          <i class="flex-shrink-0 bx bx-credit-card me-2"></i>
-                          <span class="flex-grow-1 align-middle">Billing</span>
-                          <span class="flex-shrink-0 badge badge-center rounded-pill bg-danger w-px-20 h-px-20">4</span>
+                          <i class="flex-shrink-0 bx bx-bell me-2"></i>
+                          <span class="flex-grow-1 align-middle">Notifications</span>
+                          @if($unreadNotificationCount > 0)
+                            <span class="flex-shrink-0 badge badge-center rounded-pill bg-danger w-px-20 h-px-20">{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
+                          @endif
                         </span>
                       </a>
                     </li>

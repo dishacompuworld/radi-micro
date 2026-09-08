@@ -51,6 +51,14 @@
         height: auto;
     }
 
+    .navbar-status-menu {
+        flex: 0 0 auto;
+    }
+
+    .navbar-status-menu .nav-item {
+        flex: 0 0 auto;
+    }
+
     /* Target the text elements specifically inside the MSEB container */
     .mseb-container span {
         font-size: 0.8rem !important; /* Smaller font for the "MSEB Status" label */
@@ -81,6 +89,31 @@
     .navbar-search-nav {
         min-width: 0;
         align-self: center;
+    }
+
+    .notification-menu {
+        width: min(360px, calc(100vw - 2rem));
+        max-height: 420px;
+        overflow-y: auto;
+    }
+
+    .notification-item {
+        white-space: normal;
+        border-left: 3px solid transparent;
+    }
+
+    .notification-unread {
+        background-color: rgba(105, 108, 255, 0.08);
+        border-left-color: var(--bs-primary);
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: 0.1rem;
+        right: 0.05rem;
+        min-width: 1.1rem;
+        padding: 0.15rem 0.3rem;
+        font-size: 0.65rem;
     }
 
     #navbar-search-form {
@@ -164,7 +197,11 @@
         }
 
         #navbar-collapse > .navbar-status-menu {
-            display: none;
+            display: flex;
+            grid-column: 1 / -1;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-right: 0 !important;
         }
 
         .user-menu .nav-item {
@@ -175,6 +212,11 @@
         .temp-container,
         .mseb-container {
             width: 100%;
+            min-width: 0;
+        }
+
+        .navbar-status-menu .nav-item {
+            flex: 1 1 0;
             min-width: 0;
         }
 

@@ -21,6 +21,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\PrtgApiController;
 use App\Http\Controllers\SendMail;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\NotificationController;
 
 
 Route::get('/', function () {
@@ -34,8 +35,15 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
 
 
-Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
-Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscriberChartDataAjax'])->name('dashboard.subscriber.chart');
+    Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
+    Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscriberChartDataAjax'])->name('dashboard.subscriber.chart');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::delete('notifications/delete-all', [NotificationController::class, 'deleteAll'])->name('notifications.delete-all');
+
+    
     Route::get('',[DashboardController::class,'Index']);
 
     // Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -135,7 +143,7 @@ Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscr
     Route::get('editont', [FetchSNMP::class, 'renameont'])->name('edit.ont');
     Route::get('addont', [FetchSNMP::class, 'addont'])->name('add.ont');
     Route::get('deregister', [FetchSNMP::class, 'deregistont'])->name('de.register');
-    Route::get('register', [FetchSNMP::class, 'registont'])->name('ont.register');
+    Route::get('registeront', [FetchSNMP::class, 'registont'])->name('ont.register');
     Route::get('rebootont', [FetchSNMP::class, 'rebootont'])->name('reboot.ont');
 
     Route::get('whatsappmsg', [WaController::class, 'sendtext'])->name('whatsapp.msg');

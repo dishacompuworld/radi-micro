@@ -13,6 +13,7 @@ use App\Http\Controllers\ServerStats;
 use App\Http\Controllers\MicrotikController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PrtgWebhookController;
 
 
     // Route::post('register', [AuthController::class, 'register']);
@@ -79,5 +80,8 @@ use App\Http\Controllers\DashboardController;
     Route::get('alllogs', [LogController::class, 'alllogsapi']);
 
 });
+
+// PRTG authenticates with the webhook token, not Sanctum.
+Route::post('prtg-webhook', [PrtgWebhookController::class, 'handle']);
 
 // Route::get('userdetails', [FetchapiController::class, 'subscriberDtlFromMicrotikapi']);

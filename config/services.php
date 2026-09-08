@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'prtg' => [
+        'webhook_secret' => env('PRTG_WEBHOOK_SECRET'),
+    ],
+
 ];

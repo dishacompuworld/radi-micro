@@ -410,6 +410,38 @@ class FetchSNMP extends Controller
             ]);
         }
     }
+
+
+    /**
+     * Register ONT via SNMP
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function registont(Request $request)
+    {
+        $oid = $request->input('oid');
+        $newoid = $this->oidRegist . "." . $oid;
+        
+        $success = $this->snmpSet($newoid, 'i', 1, SNMP::VERSION_2C);
+        
+        if ($success) {
+            $message = "ONT {$oid} successfully Registered";
+            $this->logActivity($message);
+            
+            return response()->json([
+                'success' => true
+            ]);
+        }
+        
+        $message = "ONT {$oid} Registration failed";
+        $this->logActivity($message);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'SNMP operation failed'
+        ]);
+    }
     
     /**
      * Deregister ONT via SNMP

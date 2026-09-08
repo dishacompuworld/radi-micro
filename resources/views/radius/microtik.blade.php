@@ -428,3 +428,109 @@
     </div>
 </div>
 @endsection
+@push('page-js')
+<script>
+$(document).ready(function() {
+$('body').on('click','#deregist',function(){
+        //e.preventDefault();
+        var $button = $(this);
+        // console.log($button); // Check if $button is defined
+        $button.prop('disabled', false); // Enable button
+        $button.html('Processing...');
+        var route = "{{route('de.register')}}";
+        var variable = $(this).data('oid');
+        $.ajax({
+            type: 'GET',
+            url: route,
+            data: {
+                oid: variable,
+            },
+            success: function(response) {
+                // $('#opticalpowers').DataTable().ajax.reload(null, false);
+                $button.html('De-Register'); // Revert button text
+                $button.prop('disabled', false);
+            }
+        });
+    });
+
+$('body').on('click','#regist',function(){
+        //e.preventDefault();
+        var $button = $(this);
+        // console.log($button); // Check if $button is defined
+        $button.prop('disabled', false); // Enable button
+        $button.html('Processing...');
+        var route = "{{route('ont.register')}}";
+        var variable = $(this).data('oid');
+        $.ajax({
+            type: 'GET',
+            url: route,
+            data: {
+                oid: variable,
+            },
+            success: function(response) {
+                // $('#opticalpowers').DataTable().ajax.reload(null, false);
+                $button.html('Register'); // Revert button text
+                $button.prop('disabled', false);
+            }
+        });
+    });
+
+    $('body').on('click','#rebootont',function(){
+        //e.preventDefault();
+        var $button = $(this);
+        // console.log($button); // Check if $button is defined
+        $button.prop('disabled', false); // Enable button
+        $button.html('Processing...');
+        var route = "{{route('reboot.ont')}}";
+        var variable = $(this).data('oid');
+        $.ajax({
+            type: 'GET',
+            url: route,
+            data: {
+                oid: variable,
+            },
+            success: function(response) {
+                // $('#opticalpowers').DataTable().ajax.reload(null, false);
+                $button.html('Reboot ONT'); // Revert button text
+                $button.prop('disabled', false);
+            }
+        });
+    });
+
+    $('body').on('click','#resetmac',function(){
+            //e.preventDefault();
+            var $button = $(this);
+            // console.log($button); // Check if $button is defined
+            $button.prop('disabled', false); // Enable button
+            $button.html('Processing...');
+            var route = "{{route('mac.reset')}}";
+            var name = $(this).data('name');
+            var id = $(this).data('id');
+            var location = $(this).data('location');
+            $.ajax({
+                type: 'GET',
+                url: route,
+                data: {
+                    name: name,
+                    id: id,
+                    location: location
+                },
+                success: function(response) {
+                    if(response.success){
+                        $('#opticalpowers').DataTable().ajax.reload(null, false);
+                        $('#message-container').addClass('alert alert-success alert-dismissible');
+                        $('#message-container').html('MAC reseted successfully. <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                        $('#message-container').show();
+                    } else {
+                        $('#message-container').addClass('alert alert-danger alert-dismissible');
+                        $('#message-container').html('MAC reset failed. <button type="button" class="close" data-dismiss="alert">&times;</button>');
+                        $('#message-container').show();
+                    }
+                    $button.prop('disabled', false);
+                    $button.html('Reset MAC');
+                }
+            });
+        });
+});
+</script>
+@endpush
