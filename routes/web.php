@@ -16,6 +16,7 @@ use App\Http\Controllers\Auth\PermissionController;
 use App\Http\Controllers\Auth\RoleController;
 use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\LogController;
+use App\Http\Controllers\OltLogController;
 use App\Http\Controllers\AlertMessageController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\PrtgApiController;
@@ -39,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard/subscriber-chart', [DashboardController::class, 'getSubscriberChartDataAjax'])->name('dashboard.subscriber.chart');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/summary', [NotificationController::class, 'summary'])->name('notifications.summary');
     Route::get('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::delete('notifications/delete-all', [NotificationController::class, 'deleteAll'])->name('notifications.delete-all');
@@ -141,6 +143,12 @@ Route::middleware('auth')->group(function () {
     Route::get('updateop', [FetchSNMP::class, 'updateop'])->name('update.ont.power');
     Route::get('deleteont', [FetchSNMP::class, 'deleteont'])->name('delete.ont');
     Route::get('editont', [FetchSNMP::class, 'renameont'])->name('edit.ont');
+    Route::get('olt-logs', [OltLogController::class, 'index'])->name('olt.logs');
+    Route::post('olt-logs/start', [OltLogController::class, 'start'])->name('olt.logs.start');
+    Route::post('olt-logs/stop', [OltLogController::class, 'stop'])->name('olt.logs.stop');
+    Route::post('olt-logs/delete', [OltLogController::class, 'deleteLogs'])->name('olt.logs.delete');
+    Route::get('olt-logs/status', [OltLogController::class, 'status'])->name('olt.logs.status');
+    Route::get('olt-logs/recent', [OltLogController::class, 'recent'])->name('olt.logs.recent');
     Route::get('addont', [FetchSNMP::class, 'addont'])->name('add.ont');
     Route::get('deregister', [FetchSNMP::class, 'deregistont'])->name('de.register');
     Route::get('registeront', [FetchSNMP::class, 'registont'])->name('ont.register');

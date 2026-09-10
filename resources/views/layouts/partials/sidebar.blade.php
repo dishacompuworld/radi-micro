@@ -254,7 +254,7 @@
 
             @php
                 $oltRoutes = [
-                    'show.opticalpowers', 'add.ont', 'edit.ont'
+                    'show.opticalpowers', 'add.ont', 'edit.ont', 'olt.logs'
                 ];
                 $isOltActive = collect($oltRoutes)->contains(fn($route) => request()->routeIs($route));
             @endphp
@@ -271,7 +271,7 @@
               <ul class="menu-sub">
                 <li class="menu-item {{ request()->routeIs('show.opticalpowers') ? 'active' : '' }}">
                   <a href="{{ route('show.opticalpowers')}}" class="menu-link">
-                    <div data-i18n="Olt Powers">Olt Powers</div>
+                    <div data-i18n="Optical Powers">Optical Powers</div>
                   </a>
                 </li>
 
@@ -287,6 +287,14 @@
                 <li class="menu-item {{ request()->routeIs('edit.ont') ? 'active' : '' }}">
                   <a href="{{ route('edit.ont')}}" class="menu-link">
                     <div data-i18n="Edit ONT">Edit ONT</div>
+                  </a>
+                </li>
+                @endcan
+
+                @can('view-olt-logs')
+                <li class="menu-item {{ request()->routeIs('olt.logs') ? 'active' : '' }}">
+                  <a href="{{ route('olt.logs')}}" class="menu-link">
+                    <div data-i18n="Logs">Logs</div>
                   </a>
                 </li>
                 @endcan

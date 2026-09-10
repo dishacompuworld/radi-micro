@@ -306,6 +306,94 @@
         <!-- DataTables JS -->
         <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script>
 
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const bellTrigger = document.querySelector('.notification-bell-trigger');
+                if (!bellTrigger) return;
+
+                const badge = bellTrigger.querySelector('.notification-badge');
+                const totalCount = document.querySelector('.notification-total-count');
+                const unreadLabel = document.querySelector('.notification-unread-label');
+                const menuList = document.querySelector('.notification-menu-list');
+                const refreshUrl = bellTrigger.dataset.refreshUrl;
+
+                const buildNotificationHtml = (items) => {
+                    if (!items || items.length === 0) {
+                        return '<li><span class="dropdown-item-text text-muted">No notifications</span></li>';
+                    }
+
+                    return items.map(item => {
+                        const sensorText = item.sensor ? `${item.sensor}${item.message ? ' - ' + item.message : ''}` : item.message || '';
+                        const statusText = item.status || 'Alert';
+                        const statusClass = String(item.status || '').toLowerCase() === 'up' ? 'success' : 'danger';
+                        const icon = item.read_at ? 'bx-envelope-open' : 'bx-error-circle';
+                        const readText = item.read_at ? 'Read' : 'Unread';
+
+                        return `
+                            <li>
+                                <a class="dropdown-item notification-item ${item.read_at ? '' : 'notification-unread'}" href="${item.read_url}">
+                                    <div class="d-flex gap-2">
+                                        <i class="bx ${icon} text-${statusClass} fs-5 mt-1"></i>
+                                        <div class="min-width-0">
+                                            <div class="fw-semibold text-truncate">${statusText}: ${item.device || 'Unknown device'}</div>
+                                            <div class="small text-muted text-truncate">${sensorText}</div>
+                                            <div class="small text-muted">${item.created_at_human} · ${readText}</div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+                        `;
+                    }).join('');
+                };
+
+                const refreshNotifications = async () => {
+                    if (!refreshUrl) return;
+
+                    try {
+                        const response = await fetch(refreshUrl, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+
+                        if (!response.ok) return;
+
+                        const data = await response.json();
+                        const unreadCount = Number(data.unread || 0);
+
+                        if (badge) {
+                            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                            badge.classList.toggle('d-none', unreadCount < 1);
+                        }
+
+                        if (totalCount) {
+                            totalCount.textContent = `Notifications (${Number(data.total || 0)})`;
+                        }
+
+                        if (unreadLabel) {
+                            if (unreadCount > 0) {
+                                unreadLabel.textContent = `${unreadCount} unread`;
+                                unreadLabel.classList.remove('d-none');
+                            } else {
+                                unreadLabel.textContent = '0 unread';
+                                unreadLabel.classList.add('d-none');
+                            }
+                        }
+
+                        if (menuList) {
+                            menuList.innerHTML = buildNotificationHtml(data.items || []);
+                        }
+                    } catch (error) {
+                        console.warn('Notification refresh failed:', error);
+                    }
+                };
+
+                refreshNotifications();
+                window.setInterval(refreshNotifications, 30000);
+            });
+        </script>
+
         <!-- Page Scripts Stack -->
         @stack('page-js')
     </body>

@@ -190,49 +190,55 @@
 
               <ul class="navbar-nav flex-row align-items-center me-2">
                 <li class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" aria-label="Notifications">
+                  <a class="nav-link dropdown-toggle hide-arrow notification-bell-trigger" href="javascript:void(0);" data-bs-toggle="dropdown" aria-label="Notifications" data-refresh-url="{{ route('notifications.summary') }}">
                     <i class="bx bx-bell bx-sm"></i>
                     @if($unreadNotificationCount > 0)
                       <span class="badge bg-danger notification-badge">{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
+                    @else
+                      <span class="badge bg-danger notification-badge d-none">0</span>
                     @endif
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end notification-menu">
                     <li class="px-3 py-2 d-flex justify-content-between align-items-center">
-                      <span class="fw-semibold">Notifications ({{ $totalNotificationCount }})</span>
+                      <span class="fw-semibold notification-total-count">Notifications ({{ $totalNotificationCount }})</span>
                       @if($unreadNotificationCount > 0)
                         <span class="d-flex align-items-center gap-2">
-                          <span class="small text-primary">{{ $unreadNotificationCount }} unread</span>
+                          <span class="small text-primary notification-unread-label">{{ $unreadNotificationCount }} unread</span>
                           <form method="POST" action="{{ route('notifications.read-all') }}">
                             @csrf
                             <button type="submit" class="btn btn-link btn-sm p-0">Mark all read</button>
                           </form>
                         </span>
+                      @else
+                        <span class="small text-primary notification-unread-label d-none">0 unread</span>
                       @endif
                     </li>
                     <li><div class="dropdown-divider my-0"></div></li>
-                    @forelse($userNotifications as $notification)
-                      @php
-                          $data = $notification->data;
-                          $status = $data['status'] ?? 'Alert';
-                          $device = $data['device'] ?? 'Unknown device';
-                          $sensor = $data['sensor'] ?? 'Unknown sensor';
-                          $message = $data['message'] ?? '';
-                      @endphp
-                      <li>
-                        <a class="dropdown-item notification-item {{ $notification->read_at ? '' : 'notification-unread' }}" href="{{ route('notifications.read', $notification) }}">
-                          <div class="d-flex gap-2">
-                            <i class="bx {{ $notification->read_at ? 'bx-envelope-open' : 'bx-error-circle' }} text-{{ strtolower($status) === 'up' ? 'success' : 'danger' }} fs-5 mt-1"></i>
-                            <div class="min-width-0">
-                              <div class="fw-semibold text-truncate">{{ $status }}: {{ $device }}</div>
-                              <div class="small text-muted text-truncate">{{ $sensor }}{{ $message ? ' - '.$message : '' }}</div>
-                              <div class="small text-muted">{{ $notification->created_at->diffForHumans() }} · {{ $notification->read_at ? 'Read' : 'Unread' }}</div>
+                    <ul class="list-unstyled mb-0 notification-menu-list">
+                      @forelse($userNotifications as $notification)
+                        @php
+                            $data = $notification->data;
+                            $status = $data['status'] ?? 'Alert';
+                            $device = $data['device'] ?? 'Unknown device';
+                            $sensor = $data['sensor'] ?? 'Unknown sensor';
+                            $message = $data['message'] ?? '';
+                        @endphp
+                        <li>
+                          <a class="dropdown-item notification-item {{ $notification->read_at ? '' : 'notification-unread' }}" href="{{ route('notifications.read', $notification) }}">
+                            <div class="d-flex gap-2">
+                              <i class="bx {{ $notification->read_at ? 'bx-envelope-open' : 'bx-error-circle' }} text-{{ strtolower($status) === 'up' ? 'success' : 'danger' }} fs-5 mt-1"></i>
+                              <div class="min-width-0">
+                                <div class="fw-semibold text-truncate">{{ $status }}: {{ $device }}</div>
+                                <div class="small text-muted text-truncate">{{ $sensor }}{{ $message ? ' - '.$message : '' }}</div>
+                                <div class="small text-muted">{{ $notification->created_at->diffForHumans() }} · {{ $notification->read_at ? 'Read' : 'Unread' }}</div>
+                              </div>
                             </div>
-                          </div>
-                        </a>
-                      </li>
-                    @empty
-                      <li><span class="dropdown-item-text text-muted">No notifications</span></li>
-                    @endforelse
+                          </a>
+                        </li>
+                      @empty
+                        <li><span class="dropdown-item-text text-muted">No notifications</span></li>
+                      @endforelse
+                    </ul>
                   </ul>
                 </li>
               </ul>
