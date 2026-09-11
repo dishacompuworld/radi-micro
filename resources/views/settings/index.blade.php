@@ -101,6 +101,7 @@
                             <div class="col-md-4"><label for="snmp_oid_dist" class="form-label">SNMP_OID_DIST</label><input type="text" class="form-control" id="snmp_oid_dist" name="snmp_oid_dist" value="{{ old('snmp_oid_dist', $settings['snmp_oid_dist']) }}"></div>
                             <div class="col-md-4"><label for="snmp_oid_regist" class="form-label">SNMP_OID_REGIST</label><input type="text" class="form-control" id="snmp_oid_regist" name="snmp_oid_regist" value="{{ old('snmp_oid_regist', $settings['snmp_oid_regist']) }}"></div>
                             <div class="col-md-4"><label for="snmp_oid_status" class="form-label">SNMP_OID_STATUS</label><input type="text" class="form-control" id="snmp_oid_status" name="snmp_oid_status" value="{{ old('snmp_oid_status', $settings['snmp_oid_status']) }}"></div>
+                            <div class="col-md-4"><label for="olt_log_limit" class="form-label">Max log lines</label><input type="number" min="1" max="100000" class="form-control" id="olt_log_limit" name="olt_log_limit" value="{{ old('olt_log_limit', $settings['olt_log_limit']) }}" placeholder="5000"></div>
                         </div>
                         <div class="mt-4 d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary">Save OLT</button>

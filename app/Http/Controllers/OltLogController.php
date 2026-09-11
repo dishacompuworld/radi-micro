@@ -32,14 +32,19 @@ class OltLogController extends Controller
         ]);
     }
 
-    public function recent()
+    public function recent(Request $request)
     {
         $logFile = storage_path('logs/olt-udp.log');
         $logs = [];
 
         if (file_exists($logFile)) {
             $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            $lines = array_slice(array_reverse($lines), 0, 200);
+            $lines = array_reverse($lines);
+
+            $shouldUseAllLogs = $request->boolean('all');
+            if (! $shouldUseAllLogs) {
+                $lines = array_slice($lines, 0, 200);
+            }
 
             foreach ($lines as $line) {
                 $entry = [

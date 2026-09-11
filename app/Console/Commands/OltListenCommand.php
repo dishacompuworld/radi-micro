@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Setting;
 use Illuminate\Console\Command;
 
 class OltListenCommand extends Command
@@ -55,6 +56,7 @@ class OltListenCommand extends Command
             );
 
             @file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
+            $this->trimLogFile($logFile, $this->getLogLimit());
 
             if ($parsed['matched']) {
                 $this->info(sprintf(
@@ -71,6 +73,34 @@ class OltListenCommand extends Command
                 $this->warn('Unparsed OLT log: ' . $payload);
             }
         }
+    }
+
+    protected function getLogLimit(): int
+    {
+        $limit = Setting::where('key', 'olt_log_limit')->value('value');
+        $limit = is_numeric($limit) ? (int) $limit : 5000;
+
+        return max(1, $limit);
+    }
+
+    protected function trimLogFile(string $logFile, int $maxLines): void
+    {
+        if (! file_exists($logFile)) {
+            return;
+        }
+
+        $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false || count($lines) <= $maxLines) {
+            return;
+        }
+
+        $trimmed = array_slice($lines, -$maxLines);
+        $content = implode(PHP_EOL, $trimmed);
+        if ($content !== '') {
+            $content .= PHP_EOL;
+        }
+
+        @file_put_contents($logFile, $content, LOCK_EX);
     }
 
     protected function parseOltLog(string $payload): array

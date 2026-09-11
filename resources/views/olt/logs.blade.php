@@ -45,9 +45,16 @@
                         <option value="all">All</option>
                         <option value="critical">Critical</option>
                         <option value="success">Success</option>
+                        <option value="success-critical">Success & Critical</option>
                         <option value="info">Informational</option>
                     </select>
                 </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div id="table-summary-top" class="text-muted small"></div>
+                <nav aria-label="OLT log pagination top">
+                    <ul class="pagination pagination-sm mb-0" id="olt-log-pagination-top"></ul>
+                </nav>
             </div>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered mb-0">
@@ -68,6 +75,12 @@
                     </tbody>
                 </table>
             </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div id="table-summary-bottom" class="text-muted small"></div>
+                <nav aria-label="OLT log pagination bottom">
+                    <ul class="pagination pagination-sm mb-0" id="olt-log-pagination-bottom"></ul>
+                </nav>
+            </div>
         </div>
     </div>
 </div>
@@ -76,6 +89,75 @@
 @push('page-js')
 <script>
     $(document).ready(function () {
+        const pageSize = 50;
+        let currentPage = 1;
+
+        function paginateRows(items) {
+            const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+            currentPage = Math.min(currentPage, totalPages);
+
+            const startIndex = (currentPage - 1) * pageSize;
+            const paginated = items.slice(startIndex, startIndex + pageSize);
+
+            return {
+                totalPages,
+                totalItems: items.length,
+                rows: paginated
+            };
+        }
+
+        function renderPagination(totalPages, totalItems) {
+            const paginations = ['#olt-log-pagination-top', '#olt-log-pagination-bottom'];
+            const summaries = ['#table-summary-top', '#table-summary-bottom'];
+
+            paginations.forEach(function (paginationSelector) {
+                const pagination = $(paginationSelector);
+                pagination.empty();
+
+                if (totalItems === 0) {
+                    return;
+                }
+
+                const prevItem = $('<li class="page-item ' + (currentPage === 1 ? 'disabled' : '') + '"><a class="page-link" href="#" aria-label="Previous">&laquo;</a></li>');
+                prevItem.on('click', function (e) {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        currentPage -= 1;
+                        refreshLogs();
+                    }
+                });
+                pagination.append(prevItem);
+
+                for (let page = 1; page <= totalPages; page++) {
+                    const pageItem = $('<li class="page-item ' + (page === currentPage ? 'active' : '') + '"><a class="page-link" href="#">' + page + '</a></li>');
+                    pageItem.on('click', function (e) {
+                        e.preventDefault();
+                        currentPage = page;
+                        refreshLogs();
+                    });
+                    pagination.append(pageItem);
+                }
+
+                const nextItem = $('<li class="page-item ' + (currentPage === totalPages ? 'disabled' : '') + '"><a class="page-link" href="#" aria-label="Next">&raquo;</a></li>');
+                nextItem.on('click', function (e) {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                        currentPage += 1;
+                        refreshLogs();
+                    }
+                });
+                pagination.append(nextItem);
+            });
+
+            const summaryText = totalItems === 0
+                ? '0 records'
+                : 'Showing ' + Math.min((currentPage - 1) * pageSize + 1, totalItems) + ' to ' + Math.min(currentPage * pageSize, totalItems) + ' of ' + totalItems + ' records';
+
+            summaries.forEach(function (summarySelector) {
+                $(summarySelector).text(summaryText);
+            });
+        }
+
         function parseOltLine(rawLine) {
             const prefixMatch = rawLine.match(/^\[[^\]]+\]\s*[^\s]+:\d+\s*(.*)$/);
             const payload = prefixMatch ? prefixMatch[1] : rawLine;
@@ -157,6 +239,10 @@
 
             if (!logs || logs.length === 0) {
                 tbody.append('<tr><td colspan="6" class="text-muted text-center">No logs received yet.</td></tr>');
+                $('#table-summary-top').text('0 records');
+                $('#table-summary-bottom').text('0 records');
+                $('#olt-log-pagination-top').empty();
+                $('#olt-log-pagination-bottom').empty();
                 return;
             }
 
@@ -179,17 +265,28 @@
 
                 const matchesSearch = !searchTerm || searchText.includes(searchTerm);
                 const category = getAlarmCategory(parsed.alarm || entry.alarm || '');
-                const matchesFilter = filterType === 'all' || category === filterType;
+                const matchesFilter = filterType === 'all'
+                    ? true
+                    : filterType === 'success-critical'
+                        ? (category === 'success' || category === 'critical')
+                        : category === filterType;
 
                 return matchesSearch && matchesFilter;
             });
 
             if (filteredLogs.length === 0) {
                 tbody.append('<tr><td colspan="6" class="text-muted text-center">No matching logs found.</td></tr>');
+                $('#table-summary-top').text('0 records');
+                $('#table-summary-bottom').text('0 records');
+                $('#olt-log-pagination-top').empty();
+                $('#olt-log-pagination-bottom').empty();
                 return;
             }
 
-            $.each(filteredLogs, function (_, row) {
+            const { totalPages, totalItems, rows } = paginateRows(filteredLogs);
+            renderPagination(totalPages, totalItems);
+
+            $.each(rows, function (_, row) {
                 const entry = typeof row === 'string' ? { raw: row } : row;
                 const timeMatch = (entry.raw || '').match(/^\[(.*?)\]/);
                 const lineTime = timeMatch ? timeMatch[1] : '';
@@ -234,7 +331,12 @@
         }
 
         function refreshLogs() {
-            $.get('{{ route('olt.logs.recent') }}', function (res) {
+            const searchTerm = $('#olt-log-search').val().trim();
+            const filterType = $('#olt-log-filter').val() || 'all';
+            const useAllLogs = searchTerm !== '' || filterType !== 'all';
+            const url = '{{ route('olt.logs.recent') }}' + (useAllLogs ? '?all=1' : '');
+
+            $.get(url, function (res) {
                 renderLogs(res.logs || []);
                 $('#last-updated').text(new Date().toLocaleTimeString());
             });
