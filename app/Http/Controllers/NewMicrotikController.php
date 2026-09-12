@@ -20,9 +20,11 @@ class NewMicrotikController extends Controller
     private $server;
     private $connectionTimeout = 15;
     private $maxRetries = 3;
+    protected $udpListenerProcessIdFile = null;
 
     public function __construct()
     {
+        $this->udpListenerProcessIdFile = storage_path('app/mikrotik_udp_listener.pid');
         // $this->middleware('role:super-admin','permission:add-server',['only' => ['create','store']]); role example
         $this->middleware('permission:view-sheduler',['only' => ['shedule']]);
         $this->middleware('permission:view-script',['only' => ['script']]);
@@ -1054,6 +1056,479 @@ class NewMicrotikController extends Controller
 
         
         return view('microtik.log', compact('title', 'seletedserver','servers'));
+    }
+
+    protected function getUdpLogFilePath($server = null): string
+    {
+        $logDir = storage_path('app/mikrotik-udp-logs');
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0775, true);
+        }
+
+        return $logDir . DIRECTORY_SEPARATOR . 'all-servers.log';
+    }
+
+    protected function readUdpPid(): ?int
+    {
+        $pidFile = storage_path('app/mikrotik_udp_listener.pid');
+        if (!file_exists($pidFile)) {
+            return null;
+        }
+
+        $pid = trim((string) file_get_contents($pidFile));
+        return $pid !== '' && is_numeric($pid) ? (int) $pid : null;
+    }
+
+    protected function startUdpListenerProcess($server = null): ?int
+    {
+        $logDir = storage_path('app/mikrotik-udp-logs');
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0775, true);
+        }
+
+        $pidFile = storage_path('app/mikrotik_udp_listener.pid');
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $phpPath = escapeshellarg(PHP_BINARY);
+            $projectDir = escapeshellarg(base_path());
+            $cmd = sprintf(
+                'cmd /c start /B "" /D %s %s artisan mikrotik:udp-logs > NUL 2>&1',
+                $projectDir,
+                $phpPath
+            );
+
+            exec($cmd, $output, $returnCode);
+
+            for ($attempt = 0; $attempt < 20; $attempt++) {
+                $pid = $this->readUdpPid();
+                if ($pid) {
+                    return $pid;
+                }
+
+                usleep(250000);
+            }
+
+            return null;
+        }
+
+        $cmd = sprintf(
+            'php %s %s > /dev/null 2>&1 & echo $! ',
+            escapeshellarg(base_path('artisan')),
+            escapeshellarg('mikrotik:udp-logs')
+        );
+
+        $output = [];
+        exec($cmd, $output, $returnCode);
+        $pid = trim((string) ($output[0] ?? ''));
+
+        if ($pid !== '' && is_numeric($pid)) {
+            file_put_contents($pidFile, (int) $pid, LOCK_EX);
+            return (int) $pid;
+        }
+
+        return null;
+    }
+
+    protected function getUdpPort(): int
+    {
+        $value = \App\Models\Setting::where('key', 'microtik_udp_port')->value('value');
+        $port = $value === null || $value === '' ? 515 : (int) $value;
+
+        return $port > 0 && $port <= 65535 ? $port : 515;
+    }
+
+    protected function findUdpOwningPid(): ?int
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return null;
+        }
+
+        $port = $this->getUdpPort();
+        $output = shell_exec(sprintf(
+            'powershell -NoProfile -Command "Get-NetUDPEndpoint -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -eq %d } | Select-Object -ExpandProperty OwningProcess -First 1" 2>$null',
+            $port
+        ));
+        if (!is_string($output)) {
+            return null;
+        }
+
+        $pid = trim((string) $output);
+        return $pid !== '' && is_numeric($pid) ? (int) $pid : null;
+    }
+
+    protected function isUdpListenerRunning(): bool
+    {
+        $pid = $this->readUdpPid();
+
+        if ($pid) {
+            if (PHP_OS_FAMILY === 'Windows') {
+                $output = shell_exec(sprintf(
+                    'powershell -NoProfile -Command "Get-Process -Id %d -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id" 2>$null',
+                    (int) $pid
+                ));
+                if (is_string($output) && trim($output) !== '') {
+                    return true;
+                }
+            } else {
+                if (file_exists('/proc/' . $pid)) {
+                    return true;
+                }
+            }
+        }
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $ownerPid = $this->findUdpOwningPid();
+            return $ownerPid !== null;
+        }
+
+        return false;
+    }
+
+    protected function windowsServiceExists(string $serviceName = 'RadiMikrotikUdp'): bool
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return false;
+        }
+
+        $output = [];
+        $code = 0;
+        @exec(sprintf('sc.exe query "%s" 2>nul', $serviceName), $output, $code);
+
+        $text = implode(' ', array_map('strval', $output));
+        return $code === 0 || stripos($text, 'SERVICE_NAME') !== false || stripos($text, 'STATE') !== false;
+    }
+
+    protected function controlWindowsService(string $action, string $serviceName = 'RadiMikrotikUdp'): bool
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return false;
+        }
+
+        $commands = [
+            sprintf('sc.exe %s "%s"', $action, $serviceName),
+            sprintf('"C:\\nssm\\nssm.exe" %s "%s"', $action, $serviceName),
+        ];
+
+        foreach ($commands as $command) {
+            $output = [];
+            $code = 0;
+            @exec($command . ' 2>nul', $output, $code);
+            if ($code === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function killProcess(int $pid): void
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            @exec(sprintf('taskkill /PID %d /F >nul 2>&1', $pid));
+            return;
+        }
+
+        @exec(sprintf('kill -9 %d 2>/dev/null', $pid));
+    }
+
+    public function udpStatus(Request $request)
+    {
+        $running = $this->isUdpListenerRunning();
+
+        return response()->json([
+            'running' => $running,
+            'port' => $this->getUdpPort(),
+            'pid' => $this->readUdpPid(),
+            'server_name' => null,
+            'log_file' => $this->getUdpLogFilePath(),
+        ]);
+    }
+
+    public function udpRecent(Request $request)
+    {
+        $logFile = $this->getUdpLogFilePath();
+        $logs = [];
+
+        if (file_exists($logFile)) {
+            $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $lines = array_reverse($lines);
+            $lines = array_slice($lines, 0, 200);
+
+            foreach ($lines as $line) {
+                $item = json_decode($line, true);
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $logs[] = [
+                    'time' => $item['time'] ?? '',
+                    'source' => $item['source'] ?? '',
+                    'message' => $item['message'] ?? ($item['raw'] ?? ''),
+                    'raw' => $item['raw'] ?? '',
+                ];
+            }
+        }
+
+        return response()->json([
+            'logs' => $logs,
+            'running' => $this->isUdpListenerRunning(),
+            'file' => $logFile,
+        ]);
+    }
+
+    public function udpStart(Request $request)
+    {
+        $port = $this->getUdpPort();
+
+        if ($this->isUdpListenerRunning()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'MikroTik UDP listener is already running.',
+                'running' => true,
+            ]);
+        }
+
+        if (PHP_OS_FAMILY === 'Windows' && $this->windowsServiceExists()) {
+            $started = $this->controlWindowsService('start');
+            if ($started) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Server started successfully.',
+                    'running' => true,
+                    'pid' => $this->readUdpPid(),
+                    'log_file' => $this->getUdpLogFilePath(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start the Windows NSSM service "RadiMikrotikUdp".',
+            ], 500);
+        }
+
+        $pid = $this->startUdpListenerProcess();
+        if (!$pid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start the MikroTik UDP listener. Check PHP permissions and port ' . $port . ' availability.',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'MikroTik UDP listener started successfully on port ' . $port . '.',
+            'running' => true,
+            'pid' => $pid,
+            'log_file' => $this->getUdpLogFilePath(),
+        ]);
+    }
+
+    public function udpStop(Request $request)
+    {
+        if (PHP_OS_FAMILY === 'Windows' && $this->windowsServiceExists()) {
+            $stopped = $this->controlWindowsService('stop');
+            if ($stopped) {
+                $pidFile = storage_path('app/mikrotik_udp_listener.pid');
+                if (file_exists($pidFile)) {
+                    @unlink($pidFile);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Server stopped.',
+                    'running' => false,
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to stop the Windows NSSM service "RadiMikrotikUdp".',
+            ], 500);
+        }
+
+        $pid = $this->readUdpPid();
+        $ownerPid = $this->findUdpOwningPid();
+
+        if (!$pid && !$ownerPid) {
+            return response()->json([
+                'success' => true,
+                'message' => 'MikroTik UDP listener is not running.',
+                'running' => false,
+            ]);
+        }
+
+        foreach (array_filter([$pid, $ownerPid]) as $targetPid) {
+            $this->killProcess((int) $targetPid);
+        }
+
+        $pidFile = storage_path('app/mikrotik_udp_listener.pid');
+        if (file_exists($pidFile)) {
+            @unlink($pidFile);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'MikroTik UDP listener stopped.',
+            'running' => false,
+        ]);
+    }
+
+    public function udpDeleteLogs(Request $request)
+    {
+        $logFile = $this->getUdpLogFilePath();
+
+        $directory = dirname($logFile);
+        if (!is_dir($directory)) {
+            mkdir($directory, 0775, true);
+        }
+
+        file_put_contents($logFile, '', LOCK_EX);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'MikroTik logs cleared.',
+        ]);
+    }
+
+    public function fetchUdpLogs(Request $request)
+    {
+        $serverId = $request->query('sserver');
+        $server = $serverId ? Server::find($serverId) : null;
+        $serverName = $server?->name ?? 'default-server';
+
+        $host = (string) $request->query('host', '0.0.0.0');
+        $port = (int) $request->query('port', 515);
+        $timeout = max(0.1, (float) $request->query('timeout', 2.0));
+        $maxPackets = max(1, (int) $request->query('max_packets', 20));
+
+        if (!function_exists('socket_create')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'PHP socket extension is not available on this server.',
+            ], 500);
+        }
+
+        $socket = @socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+        if ($socket === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to create UDP socket.',
+                'error' => socket_strerror(socket_last_error()),
+            ], 500);
+        }
+
+        socket_set_option($socket, SOL_SOCKET, SO_REUSEADDR, 1);
+        socket_set_option($socket, SOL_SOCKET, SO_RCVTIMEO, [
+            'sec' => (int) floor($timeout),
+            'usec' => (int) (($timeout - floor($timeout)) * 1000000),
+        ]);
+
+        if (!@socket_bind($socket, $host, $port)) {
+            $error = socket_strerror(socket_last_error($socket));
+            socket_close($socket);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to bind UDP socket to ' . $host . ':' . $port,
+                'error' => $error,
+            ], 409);
+        }
+
+        socket_getsockname($socket, $boundHost, $boundPort);
+        $logs = [];
+        $deadline = microtime(true) + $timeout;
+
+        while (count($logs) < $maxPackets && microtime(true) < $deadline) {
+            $buffer = '';
+            $sender = '';
+            $senderPort = 0;
+
+            $read = @socket_recvfrom($socket, $buffer, 4096, 0, $sender, $senderPort);
+            if ($read === false) {
+                $errorCode = socket_last_error($socket);
+                if ($errorCode === SOCKET_EAGAIN || $errorCode === SOCKET_EWOULDBLOCK) {
+                    break;
+                }
+                usleep(150000);
+                continue;
+            }
+
+            $message = trim((string) $buffer);
+            if ($message === '') {
+                continue;
+            }
+
+            $normalized = preg_replace('/^<\d+>\s*/', '', $message);
+
+            $logs[] = [
+                'time' => now()->toDateTimeString(),
+                'source' => $sender . ':' . $senderPort,
+                'message' => $normalized,
+                'raw' => $message,
+            ];
+        }
+
+        socket_close($socket);
+
+        $logDir = storage_path('app/mikrotik-udp-logs');
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0775, true);
+        }
+
+        $safeName = preg_replace('/[^A-Za-z0-9_.-]+/', '-', strtolower(trim($serverName)));
+        $safeName = trim((string) $safeName, "-_. ");
+        $safeName = $safeName !== '' ? $safeName : 'default-server';
+        $logFile = $logDir . DIRECTORY_SEPARATOR . $safeName . '.log';
+
+        $existing = [];
+        if (is_file($logFile)) {
+            $existing = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        }
+
+        $entries = $existing;
+        foreach ($logs as $log) {
+            $entries[] = json_encode([
+                'time' => $log['time'],
+                'source' => $log['source'],
+                'message' => $log['message'],
+                'raw' => $log['raw'],
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        $logLimit = (int) (\App\Models\Setting::where('key', 'microtik_log_limit')->value('value') ?: 1000);
+        if ($logLimit < 1 || $logLimit > 100000) {
+            $logLimit = 1000;
+        }
+
+        if (count($entries) > $logLimit) {
+            $entries = array_slice($entries, -$logLimit);
+        }
+
+        file_put_contents($logFile, implode(PHP_EOL, $entries) . PHP_EOL, LOCK_EX);
+
+        $rows = [];
+        foreach (array_reverse($logs) as $log) {
+            $rows[] = [
+                'time' => $log['time'],
+                'time1' => $log['time'],
+                'topics' => $log['source'],
+                'topics1' => $log['source'],
+                'message' => $log['message'],
+                'source' => $log['source'],
+                'raw' => $log['raw'],
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'host' => $boundHost,
+            'port' => (int) $boundPort,
+            'server_name' => $serverName,
+            'log_file' => $logFile,
+            'count' => count($rows),
+            'data' => $rows,
+            'logs' => $rows,
+        ]);
     }
 
     public function getSystemHealth(Request $request)

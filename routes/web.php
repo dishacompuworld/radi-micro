@@ -79,6 +79,12 @@ Route::middleware('auth')->group(function () {
     Route::get('showservices', [NewMicrotikController::class, 'showServices'])->name('show.services');
     Route::get('logs', [NewMicrotikController::class, 'viewLogs'])->name('microtik.logs');
     Route::get('log', [NewMicrotikController::class, 'viewLog'])->name('microtik.log');
+    Route::get('log/udp', [NewMicrotikController::class, 'fetchUdpLogs'])->name('microtik.log.udp');
+    Route::get('microtik-logs/status', [NewMicrotikController::class, 'udpStatus'])->name('microtik.logs.status');
+    Route::get('microtik-logs/recent', [NewMicrotikController::class, 'udpRecent'])->name('microtik.logs.recent');
+    Route::post('microtik-logs/start', [NewMicrotikController::class, 'udpStart'])->name('microtik.logs.start');
+    Route::post('microtik-logs/stop', [NewMicrotikController::class, 'udpStop'])->name('microtik.logs.stop');
+    Route::post('microtik-logs/delete', [NewMicrotikController::class, 'udpDeleteLogs'])->name('microtik.logs.delete');
     Route::post('log/login', [NewMicrotikController::class, 'microtikLogin'])->name('microtik.log.login');
     Route::post('log/logout', [NewMicrotikController::class, 'microtikLogout'])->name('microtik.log.logout');
     Route::get('log/stream', [NewMicrotikController::class, 'streamLog'])->name('microtik.log.stream');

@@ -10,6 +10,16 @@ class Server extends Model
 {
     use HasFactory, LogsActivity;
 
+    protected $fillable = [
+        'name',
+        'mip',
+        'ip2',
+        'shortname',
+        'username',
+        'password',
+        'enable',
+    ];
+
     public $timestamps = false;
 
     // protected static $logAtttibutes = ['name', 'mip','shortname', 'username','enable'];

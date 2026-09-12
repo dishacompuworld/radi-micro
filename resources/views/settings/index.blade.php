@@ -171,8 +171,12 @@
                     <form action="{{ route('settings.update') }}" method="POST">
                         @csrf
                         <div class="row g-3">
-                            <div class="col-md-6"><label for="microtik_interface1" class="form-label">MICROTIK_INTERFACE1</label><input type="text" class="form-control" id="microtik_interface1" name="microtik_interface1" value="{{ old('microtik_interface1', $settings['microtik_interface1']) }}"></div>
-                            <div class="col-md-6"><label for="microtik_interface2" class="form-label">MICROTIK_INTERFACE2</label><input type="text" class="form-control" id="microtik_interface2" name="microtik_interface2" value="{{ old('microtik_interface2', $settings['microtik_interface2']) }}"></div>
+                            <div class="col-md-3"><label for="microtik_interface1" class="form-label">MICROTIK_INTERFACE1</label><input type="text" class="form-control" id="microtik_interface1" name="microtik_interface1" value="{{ old('microtik_interface1', $settings['microtik_interface1']) }}"></div>
+                            <div class="col-md-3"><label for="microtik_interface2" class="form-label">MICROTIK_INTERFACE2</label><input type="text" class="form-control" id="microtik_interface2" name="microtik_interface2" value="{{ old('microtik_interface2', $settings['microtik_interface2']) }}"></div>
+                            <div class="col-md-3"><label for="microtik_main_prefix" class="form-label">MICROTIK_MAIN_PREFIX</label><input type="text" class="form-control" id="microtik_main_prefix" name="microtik_main_prefix" value="{{ old('microtik_main_prefix', $settings['microtik_main_prefix']) }}"></div>
+                            <div class="col-md-3"><label for="microtik_local_prefix" class="form-label">MICROTIK_LOCAL_PREFIX</label><input type="text" class="form-control" id="microtik_local_prefix" name="microtik_local_prefix" value="{{ old('microtik_local_prefix', $settings['microtik_local_prefix']) }}"></div>
+                            <div class="col-md-3"><label for="microtik_udp_port" class="form-label">MICROTIK_UDP_PORT</label><input type="number" min="1" max="65535" class="form-control" id="microtik_udp_port" name="microtik_udp_port" value="{{ old('microtik_udp_port', $settings['microtik_udp_port']) }}"></div>
+                            <div class="col-md-3"><label for="microtik_log_limit" class="form-label">MICROTIK_LOG_LIMIT</label><input type="number" min="1" max="100000" class="form-control" id="microtik_log_limit" name="microtik_log_limit" value="{{ old('microtik_log_limit', $settings['microtik_log_limit']) }}"></div>
                         </div>
                         <div class="mt-4 d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary">Save MikroTik</button>
