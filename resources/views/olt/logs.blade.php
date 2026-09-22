@@ -1,5 +1,16 @@
 @extends('layouts.admin')
 
+@push('page-css')
+<style>
+    .olt-log-table th,
+    .olt-log-table td {
+        padding: 2px 6px;
+        line-height: 1.1;
+        vertical-align: middle;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container-xxl flex-grow-1 container-p-y">
     <div class="row mb-4">
@@ -57,7 +68,7 @@
                 </nav>
             </div>
             <div class="table-responsive">
-                <table class="table table-striped table-bordered mb-0">
+                <table class="table table-sm table-striped table-bordered mb-0 olt-log-table">
                     <thead>
                         <tr>
                             <th>Time</th>
@@ -87,6 +98,18 @@
 @endsection
 
 @push('page-js')
+<style>
+    #olt-log-body td {
+        padding: 0.2rem 0.35rem;
+        line-height: 1.15;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    #olt-log-body td:nth-child(5) {
+        white-space: normal;
+    }
+</style>
 <script>
     $(document).ready(function () {
         const pageSize = 50;
@@ -224,11 +247,40 @@
                 return 'critical';
             }
 
-            if (/activated successfully|connected/i.test(alarmText)) {
+            if (/activated successfully|connected|link was up/i.test(alarmText)) {
                 return 'success';
             }
 
             return 'info';
+        }
+
+        function getTimeAgo(timestamp) {
+            if (!timestamp) {
+                return '';
+            }
+
+            const eventTime = new Date(timestamp.replace(' ', 'T'));
+            if (Number.isNaN(eventTime.getTime())) {
+                return '';
+            }
+
+            const seconds = Math.max(0, Math.floor((Date.now() - eventTime.getTime()) / 1000));
+            if (seconds < 60) {
+                return seconds + ' sec ago';
+            }
+
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) {
+                return minutes + ' min ago';
+            }
+
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) {
+                return hours + ' hr ago';
+            }
+
+            const days = Math.floor(hours / 24);
+            return days + ' day' + (days === 1 ? '' : 's') + ' ago';
         }
 
         function renderLogs(logs) {
@@ -318,9 +370,13 @@
                 const nameText = entry.name || '-';
                 const powerText = entry.power !== undefined && entry.power !== null && entry.power !== '' ? entry.power : '';
                 const displayName = powerText ? nameText + ' (' + powerText + ')' : nameText;
+                const timeAgo = getTimeAgo(time);
+                const timeCell = time
+                    ? '<span title="' + time + '">' + time + '</span> <small class="text-muted">(' + timeAgo + ')</small>'
+                    : '-';
 
                 const tr = $('<tr>');
-                tr.append('<td>' + (time || '-') + '</td>');
+                tr.append('<td>' + timeCell + '</td>');
                 tr.append('<td>' + serial + '</td>');
                 tr.append('<td>' + oidLink + '</td>');
                 tr.append('<td>' + displayName + '</td>');

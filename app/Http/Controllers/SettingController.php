@@ -70,6 +70,7 @@ class SettingController extends Controller
             'mail_encryption' => $this->getSettingValue('mail_encryption', config('mail.mailers.smtp.encryption', 'tls')),
             'mail_from_address' => $this->getSettingValue('mail_from_address', config('mail.from.address', 'hello@example.com')),
             'mail_from_name' => $this->getSettingValue('mail_from_name', config('mail.from.name', config('app.name', 'Radi Micro'))),
+            'prtg_notification_mail' => $this->getSettingValue('prtg_notification_mail', '0'),
         ];
 
         return view('settings.index', compact('title', 'settings'));
@@ -123,6 +124,7 @@ class SettingController extends Controller
             'mail_encryption' => 'nullable|string|max:50',
             'mail_from_address' => 'nullable|email|max:255',
             'mail_from_name' => 'nullable|string|max:255',
+            'prtg_notification_mail' => 'nullable|boolean',
         ]);
 
         foreach ($this->settingFieldDefinitions() as $fieldKey => $fieldInfo) {
@@ -136,9 +138,9 @@ class SettingController extends Controller
                 $value = trim($value);
             }
 
-            if ($fieldKey === 'olt_snmp_enabled') {
-                $persistKey = 'olt_snmp_enabled';
-                $persistValue = $request->boolean('olt_snmp_enabled') ? '1' : '0';
+            if (in_array($fieldKey, ['olt_snmp_enabled', 'prtg_notification_mail'], true)) {
+                $persistKey = $fieldKey;
+                $persistValue = $request->boolean($fieldKey) ? '1' : '0';
             } else {
                 $persistKey = $fieldKey;
                 $persistValue = $value;
@@ -226,6 +228,7 @@ class SettingController extends Controller
             'mail_encryption' => ['group' => 'mail'],
             'mail_from_address' => ['group' => 'mail'],
             'mail_from_name' => ['group' => 'mail'],
+            'prtg_notification_mail' => ['group' => 'mail'],
         ];
     }
 

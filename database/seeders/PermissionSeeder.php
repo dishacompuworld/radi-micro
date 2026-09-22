@@ -33,8 +33,10 @@ class PermissionSeeder extends Seeder
             'all-logs', 'delete-all-logs', 
             'view-sheduler', 'view-script', 'view-microtik-logs', 'view-system-health', 'view-neighbors', 'view-services',
             'view-dashboard', 'view-subscriber', 'view-dashboard-stats',
-            'send-whatsapp'
-
+            'send-whatsapp',
+            
+            // ADDED THE MISSING PERMISSIONS HERE:
+            'view-serverstats', 'show-log', 'view-radius', 'view-access-control', 'view-active-users'
         ];
 
         foreach ($permissions as $permission) {

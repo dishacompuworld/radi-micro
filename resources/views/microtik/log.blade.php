@@ -48,6 +48,7 @@
                 <div class="col-md-4">
                     <select id="mikrotik-log-filter" class="form-select form-select-sm">
                         <option value="all">All</option>
+                        <option value="critical">Critical</option>
                         <option value="error">Errors</option>
                         <option value="warning">Warnings</option>
                         <option value="success">Success</option>
@@ -63,7 +64,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-striped table-bordered mb-0">
+                <table class="table table-sm table-striped table-bordered mb-0">
                     <thead>
                         <tr>
                             <th>Time</th>
@@ -94,6 +95,25 @@
 <style>
     .mikrotik-success {
         color: #0b5d35 !important;
+    }
+
+    #mikrotik-log-body > tr > td {
+        height: 1px !important;
+        padding: 0.2rem 0.35rem !important;
+        line-height: 1.15 !important;
+        vertical-align: middle !important;
+        white-space: nowrap !important;
+        font-size: 0.84rem;
+    }
+
+    #mikrotik-log-body > tr > td:first-child,
+    #mikrotik-log-body > tr > td:first-child span {
+        white-space: nowrap !important;
+        font-size: 0.76rem;
+    }
+
+    #mikrotik-log-body > tr > td:nth-child(4) {
+        white-space: normal !important;
     }
 </style>
 
@@ -244,7 +264,7 @@ $(document).ready(function () {
     function logMessageClass(message) {
         const text = (message || '').toLowerCase();
 
-        if (/authentication failed|disconnected|terminating\.\.\.|failed|error/.test(text)) {
+        if (/link was down|authentication failed|disconnected|terminating\.\.\.|failed|error/.test(text)) {
             return 'text-danger fw-semibold';
         }
 
@@ -252,7 +272,7 @@ $(document).ready(function () {
             return 'text-warning fw-semibold';
         }
 
-        if (/logged in|connected|authenticated|connection established/.test(text)) {
+        if (/link was up|logged in|connected|authenticated|connection established/.test(text)) {
             return 'mikrotik-success fw-semibold';
         }
 
@@ -272,7 +292,7 @@ $(document).ready(function () {
             const matchesSearch = !searchTerm || text.includes(searchTerm);
             const matchesServer = serverFilter === 'all' || server === (serverFilter === 'main' ? 'main server' : 'local server');
             const category = logMessageClass(row.message || row.raw || '').includes('text-danger')
-                ? 'error'
+                ? (/link was down/i.test(row.message || row.raw || '') ? 'critical' : 'error')
                 : logMessageClass(row.message || row.raw || '').includes('text-warning')
                     ? 'warning'
                     : logMessageClass(row.message || row.raw || '').includes('text-success')
@@ -415,7 +435,7 @@ $(document).ready(function () {
                 const source = row.source || '-';
                 const messageText = formatMessageCell(row.message || row.raw || '-');
                 const messageClass = logMessageClass(row.message || row.raw || '');
-                const timeHtml = '<div class="fw-semibold">' + timeInfo.full + '</div><div class="small text-muted">' + timeInfo.relative + '</div>';
+                const timeHtml = '<span title="' + timeInfo.full + '">' + timeInfo.full + ' (' + timeInfo.relative + ')</span>';
                 body.append('<tr><td>' + timeHtml + '</td><td>' + server + '</td><td>' + source + '</td><td class="' + messageClass + '">' + messageText + '</td></tr>');
             });
 

@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\Setting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -19,7 +20,13 @@ class PrtgAlert extends Notification
     
     public function via($notifiable)
     {
-        return ['mail', 'database']; // Choose your channels
+        $channels = ['database'];
+
+        if (Setting::where('key', 'prtg_notification_mail')->value('value') === '1') {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
     
     public function toMail($notifiable)

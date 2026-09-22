@@ -196,6 +196,14 @@
                             <div class="col-md-4"><label for="mail_encryption" class="form-label">MAIL_ENCRYPTION</label><input type="text" class="form-control" id="mail_encryption" name="mail_encryption" value="{{ old('mail_encryption', $settings['mail_encryption']) }}"></div>
                             <div class="col-md-6"><label for="mail_from_address" class="form-label">MAIL_FROM_ADDRESS</label><input type="text" class="form-control" id="mail_from_address" name="mail_from_address" value="{{ old('mail_from_address', $settings['mail_from_address']) }}"></div>
                             <div class="col-md-6"><label for="mail_from_name" class="form-label">MAIL_FROM_NAME</label><input type="text" class="form-control" id="mail_from_name" name="mail_from_name" value="{{ old('mail_from_name', $settings['mail_from_name']) }}"></div>
+                            <div class="col-12">
+                                <div class="form-check form-switch">
+                                    <input type="hidden" name="prtg_notification_mail" value="0">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="prtg_notification_mail" name="prtg_notification_mail" value="1" {{ old('prtg_notification_mail', $settings['prtg_notification_mail']) === '1' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="prtg_notification_mail">Prtg Notification Mail</label>
+                                </div>
+                                <small class="text-muted">When enabled, PRTG alerts are also sent by email. Alerts remain available in the dashboard when disabled.</small>
+                            </div>
                         </div>
                         <div class="mt-4 d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary">Save Mail</button>
