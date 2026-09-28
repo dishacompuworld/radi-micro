@@ -359,6 +359,10 @@ class FetchSNMP extends Controller
             DB::table('opticalpowers')
                 ->where('oid', $oid)
                 ->delete();
+
+            DB::table('subscribers')
+            ->where('oid', $oid)
+            ->delete();
                 
             $message = "ONT {$oid} deleted";
             $this->logActivity($message);
