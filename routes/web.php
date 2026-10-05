@@ -124,6 +124,9 @@ Route::middleware('auth')->group(function () {
     Route::get('speedchange', [FetchapiController::class, 'overrightspeed'])->name('speed.change');
     Route::get('searchsubscriber', [FetchapiController::class, 'searchsubscriber'])->name('search.subscriber');
     Route::get('searchsubscriberall', [FetchapiController::class, 'searchsubscriberall'])->name('search.subscriberall');
+    Route::get('disabledsubscribers', [FetchapiController::class, 'getdisablesubscribers'])->name('get.disabledsubscribers');
+    // Route::get('allactiveusersservice', [FetchapiController::class, 'allactiveusersservice'])->name('get.activeusers.service');
+
     // Route::get('allsubcount', [FetchapiController::class, 'allactiveusers'])->name('all.activeuser');
     
     //findmacvendor

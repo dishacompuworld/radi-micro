@@ -1293,6 +1293,49 @@ class FetchapiController extends Controller
         return $activeusercount;
     }
 
+    public function allactiveusersservice(){
+
+        $this->login();
+        $tokan = session()->get('tokan');
+
+        // $title = "Subscriber Details";
+
+        $location = DB::table('locations')
+                    ->where('enable', 1)
+                    ->get();
+
+        $activeusercount = 0;
+
+        // $dattta = DB::table('subscribercount')
+        // ->where('datee', now()->format('Y-m-d'))
+        // ->get();
+
+        // // return $dattta;
+
+        // if(!$dattta->isEmpty()){
+        //     $activeusercount=$dattta[0]->subcount;
+        // }else{
+            foreach($location as $loc){
+                $urll = $loc-> url;
+                // $uriii = $loc-> name;
+                $response1 = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                    'Authentication' => $tokan
+                ])->get('https://' . $urll . '/location_dashboard');
+
+                if(isset($response1['active_subscribers_count'])){
+                    $activeusercount += $response1['active_subscribers_count'];
+                }
+            }
+            DB::table('subscribercount')->updateOrInsert(
+                ['datee' => now()->toDateString()],
+                ['subcount' => $activeusercount]
+            );
+        // }
+        return $activeusercount;
+    }
+
     public function findmacvendor(Request $request){
         $title="Find MAC Details";
        $mac = $request->mac;
@@ -1367,7 +1410,7 @@ class FetchapiController extends Controller
         $this->login();
         $tokan = session()->get('tokan');
 
-        $title = "Test API";
+       // $title = "Test API";
         // $idd = $request->id;
 
         // $response = Http::withHeaders([

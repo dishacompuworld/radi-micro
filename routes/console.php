@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use App\Http\Controllers\FetchapiController;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -11,6 +12,11 @@ Artisan::command('logs:clear', function() {
     exec('echo "" > ' . storage_path('logs/laravel.log'));
     $this->info('Logs have been cleared');
 })->describe('Clear log files');
+
+Artisan::command('subscribers:count-active', function () {
+    $count = app(FetchapiController::class)->allactiveusersservice();
+    $this->info('Active subscribers: ' . $count);
+})->purpose('Fetch and store the active subscriber count across locations');
 
 Artisan::command('mikrotik:udp-logs', function () {
     $port = (int) (\App\Models\Setting::where('key', 'microtik_udp_port')->value('value') ?: 515);
