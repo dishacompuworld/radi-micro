@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\FetchapiController;
+use Illuminate\Support\Facades\Log;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -16,6 +17,9 @@ Artisan::command('logs:clear', function() {
 Artisan::command('subscribers:count-active', function () {
     $count = app(FetchapiController::class)->allactiveusersservice();
     $this->info('Active subscribers: ' . $count);
+    if($count > 0) {
+        Log::info('Active Subscribers Fetched. count: ' . $count);
+    }
 })->purpose('Fetch and store the active subscriber count across locations');
 
 Artisan::command('mikrotik:udp-logs', function () {
