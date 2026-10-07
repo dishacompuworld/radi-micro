@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping();
 
         $schedule->command('subscribers:count-active')
-            ->dailyAt('20:37')
+            ->dailyAt('23:37')
             ->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
