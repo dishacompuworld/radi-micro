@@ -192,7 +192,7 @@
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+disconnected\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+Warn\s+of\s+dying-gasp\s+for\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+connected\.?\s*$/i,
-                /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+PON\s+(?<pon>\d+)\s+ONU\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+ethernet\s+port\s+\d+\s+link\s+was\s+up\.?\s*$/i,
+                /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+(?:\[[^\]]+\]\s*)?PON\s+(?<pon>\d+)\s+ONU\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+ethernet\s+port\s+\d+\s+link\s+was\s+(?<status>up|down)\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+activated\s+successfully\.?\s*$/i
             ];
 
@@ -201,8 +201,16 @@
                 if (match) {
                     let alarm = (match.groups.alarm || '').replace(/[\.\s]+$/, '').trim();
 
+                    if (!alarm && match.groups.status) {
+                        alarm = 'Link was ' + match.groups.status.toLowerCase();
+                    }
+
                     if (!alarm) {
-                        if (/link was up|was connected/i.test(payload)) {
+                        if (/link was down/i.test(payload)) {
+                            alarm = 'Link was down';
+                        } else if (/link was up/i.test(payload)) {
+                            alarm = 'Link was up';
+                        } else if (/was connected/i.test(payload)) {
                             alarm = 'Connected';
                         } else if (/was activated successfully/i.test(payload)) {
                             alarm = 'Activated successfully';
@@ -243,11 +251,15 @@
         }
 
         function getAlarmCategory(alarmText) {
-            if (/lost|disconnected|last down causes|link was down|LOS|dying-gasp|dying gasp/i.test(alarmText)) {
+            if (/lost|disconnected|last down causes|LOS|dying-gasp|dying gasp/i.test(alarmText)) {
                 return 'critical';
             }
 
-            if (/activated successfully|connected|link was up/i.test(alarmText)) {
+            if (/link was down|link was up/i.test(alarmText)) {
+                return 'info';
+            }
+
+            if (/activated successfully|connected/i.test(alarmText)) {
                 return 'success';
             }
 
@@ -359,13 +371,16 @@
                     : '-';
 
                 const alarmText = (parsed.alarm || entry.alarm || '-');
-                const isCriticalAlarm = /lost|disconnected|last down causes|link was down|LOS|dying-gasp|dying gasp/i.test(alarmText);
-                const isSuccessAlarm = /activated successfully|connected|link was up/i.test(alarmText);
+                const isCriticalAlarm = /lost|disconnected|last down causes|LOS|dying-gasp|dying gasp/i.test(alarmText);
+                const isSuccessAlarm = /activated successfully|connected/i.test(alarmText);
+                const isInformationalAlarm = /link was down|link was up/i.test(alarmText);
                 const alarmCell = isCriticalAlarm
                     ? '<span class="text-danger fw-semibold">' + alarmText + '</span>'
                     : isSuccessAlarm
                         ? '<span class="text-success fw-semibold">' + alarmText + '</span>'
-                        : alarmText;
+                        : isInformationalAlarm
+                            ? '<span class="text-muted">' + alarmText + '</span>'
+                            : alarmText;
 
                 const nameText = entry.name || '-';
                 const powerText = entry.power !== undefined && entry.power !== null && entry.power !== '' ? entry.power : '';

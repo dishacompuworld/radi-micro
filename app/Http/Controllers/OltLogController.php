@@ -72,7 +72,7 @@ class OltLogController extends Controller
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+disconnected\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+Warn\s+of\s+dying-gasp\s+for\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+connected\.?\s*$/i',
-                    '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+PON\s+(?P<pon>\d+)\s+ONU\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+ethernet\s+port\s+\d+\s+link\s+was\s+up\.?\s*$/i',
+                    '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+(?:\[[^\]]+\]\s*)?PON\s+(?P<pon>\d+)\s+ONU\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+ethernet\s+port\s+\d+\s+link\s+was\s+(?P<status>up|down)\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+activated\s+successfully\.?\s*$/i',
                 ];
 
@@ -86,8 +86,16 @@ class OltLogController extends Controller
                         $entry['count'] = $matches['count'] ?? '';
                         $entry['alarm'] = trim($matches['alarm'] ?? '');
 
+                        if ($entry['alarm'] === '' && isset($matches['status'])) {
+                            $entry['alarm'] = 'Link was ' . strtolower($matches['status']);
+                        }
+
                         if ($entry['alarm'] === '') {
-                            if (stripos($payload, 'link was up') !== false || stripos($payload, 'was connected') !== false) {
+                            if (stripos($payload, 'link was down') !== false) {
+                                $entry['alarm'] = 'Link was down';
+                            } elseif (stripos($payload, 'link was up') !== false) {
+                                $entry['alarm'] = 'Link was up';
+                            } elseif (stripos($payload, 'was connected') !== false) {
                                 $entry['alarm'] = 'Connected';
                             } elseif (stripos($payload, 'was activated successfully') !== false) {
                                 $entry['alarm'] = 'Activated successfully';
