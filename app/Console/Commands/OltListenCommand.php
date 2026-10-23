@@ -110,8 +110,9 @@ class OltListenCommand extends Command
             '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+(?:\[[^\]]+\]\s*)?PON\s+(?P<pon>\d+)\s+ONU\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+(?P<alarm>.+?)\s*$/i',
             '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+Signals\s+were\s+lost\s+for\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\.?\s*$/i',
             '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+last\s+down\s+causes?\s*:\s*(?P<alarm>.+?)\.?\s*$/i',
-            '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+disconnected\.?\s*$/i',
+            '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+disconnected(?:\s+by\s+.+?)?\.?\s*$/i',
             '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+Warn\s+of\s+dying-gasp\s+for\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\.?\s*$/i',
+            '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+(?P<status>activated|deactivated)\s+successfully(?P<actor>\s+by\s+.+?)?\.?\s*$/i',
         ];
 
         foreach ($patterns as $pattern) {
@@ -119,8 +120,18 @@ class OltListenCommand extends Command
                 $count = isset($matches['count']) ? (int) $matches['count'] : 1;
                 $alarm = rtrim(trim($matches['alarm'] ?? ''), '. ');
 
+                if ($alarm !== '' && stripos($payload, 'last down causes') !== false) {
+                    $alarm = 'Last down causes: ' . $alarm;
+                }
+
                 if ($alarm === '') {
-                    if (stripos($payload, 'dying-gasp') !== false) {
+                    if (isset($matches['status'])) {
+                        $alarm = sprintf(
+                            '%s successfully%s',
+                            strtolower($matches['status']),
+                            $matches['actor'] ?? ''
+                        );
+                    } elseif (stripos($payload, 'dying-gasp') !== false) {
                         $alarm = 'Dying-gasp';
                     } elseif (stripos($payload, 'Signals were lost') !== false) {
                         $alarm = 'Signals were lost';
@@ -136,7 +147,7 @@ class OltListenCommand extends Command
                     'timestamp' => $matches['timestamp'],
                     'device' => $matches['device'],
                     'event' => $matches['event'],
-                    'serial' => $matches['serial'],
+                    'serial' => $matches['serial'] ?? '',
                     'ont' => $matches['ont'],
                     'pon' => $matches['pon'],
                     'alarm' => $alarm,

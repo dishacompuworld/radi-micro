@@ -69,10 +69,11 @@ class OltLogController extends Controller
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+(?:\[[^\]]+\]\s*)?PON\s+(?P<pon>\d+)\s+ONU\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+(?P<alarm>.+?)\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+Signals\s+were\s+lost\s+for\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+last\s+down\s+causes?\s*:\s*(?P<alarm>.+?)\.?\s*$/i',
-                    '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+disconnected\.?\s*$/i',
+                    '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+disconnected(?:\s+by\s+.+?)?\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+Warn\s+of\s+dying-gasp\s+for\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+connected\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+(?:\[[^\]]+\]\s*)?PON\s+(?P<pon>\d+)\s+ONU\(SN\s+(?P<serial>[A-Z0-9-]+)\)\s+(?P<ont>\d+)\s+ethernet\s+port\s+\d+\s+link\s+was\s+(?P<status>up|down)\.?\s*$/i',
+                    '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+(?P<status>activated|deactivated)\s+successfully(?P<actor>\s+by\s+.+?)?\.?\s*$/i',
                     '/^\s*<\d+>\s*(?P<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<device>\S+)\s+(?P<event>\d+)\s+ONU\s+(?P<ont>\d+)\s+in\s+PON\s+(?P<pon>\d+)\s+was\s+activated\s+successfully\.?\s*$/i',
                 ];
 
@@ -85,6 +86,18 @@ class OltLogController extends Controller
                         $entry['pon'] = $matches['pon'] ?? '';
                         $entry['count'] = $matches['count'] ?? '';
                         $entry['alarm'] = trim($matches['alarm'] ?? '');
+
+                        if (isset($matches['status']) && isset($matches['actor'])) {
+                            $entry['alarm'] = sprintf(
+                                '%s successfully%s',
+                                strtolower($matches['status']),
+                                $matches['actor'] ?? ''
+                            );
+                        }
+
+                        if ($entry['alarm'] !== '' && stripos($payload, 'last down causes') !== false) {
+                            $entry['alarm'] = 'Last down causes: ' . $entry['alarm'];
+                        }
 
                         if ($entry['alarm'] === '' && isset($matches['status'])) {
                             $entry['alarm'] = 'Link was ' . strtolower($matches['status']);

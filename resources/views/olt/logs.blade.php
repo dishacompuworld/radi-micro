@@ -189,10 +189,11 @@
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+(?:\[[^\]]+\]\s*)?PON\s+(?<pon>\d+)\s+ONU\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+(?<alarm>.+?)\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+Signals\s+were\s+lost\s+for\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+last\s+down\s+causes?\s*:\s*(?<alarm>.+?)\.?\s*$/i,
-                /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+disconnected\.?\s*$/i,
+                /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+disconnected(?:\s+by\s+.+?)?\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+Warn\s+of\s+dying-gasp\s+for\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+connected\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+(?:\[[^\]]+\]\s*)?PON\s+(?<pon>\d+)\s+ONU\(SN\s+(?<serial>[A-Z0-9-]+)\)\s+(?<ont>\d+)\s+ethernet\s+port\s+\d+\s+link\s+was\s+(?<status>up|down)\.?\s*$/i,
+                /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+(?<status>activated|deactivated)\s+successfully(?<actor>\s+by\s+.+?)?\.?\s*$/i,
                 /^<(?<pri>\d+)>\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?<device>\S+)\s+(?<event>\d+)\s+ONU\s+(?<ont>\d+)\s+in\s+PON\s+(?<pon>\d+)\s+was\s+activated\s+successfully\.?\s*$/i
             ];
 
@@ -202,7 +203,16 @@
                     let alarm = (match.groups.alarm || '').replace(/[\.\s]+$/, '').trim();
 
                     if (!alarm && match.groups.status) {
-                        alarm = 'Link was ' + match.groups.status.toLowerCase();
+                        if (/^(activated|deactivated)$/i.test(match.groups.status)) {
+                            alarm = match.groups.status.toLowerCase() + ' successfully'
+                                + (match.groups.actor || '');
+                        } else {
+                            alarm = 'Link was ' + match.groups.status.toLowerCase();
+                        }
+                    }
+
+                    if (alarm && /last down causes/i.test(payload)) {
+                        alarm = 'Last down causes: ' + alarm;
                     }
 
                     if (!alarm) {
@@ -251,7 +261,7 @@
         }
 
         function getAlarmCategory(alarmText) {
-            if (/lost|disconnected|last down causes|LOS|dying-gasp|dying gasp/i.test(alarmText)) {
+            if (/lost|disconnected|deactivated successfully|last down causes|LOS|dying-gasp|dying gasp/i.test(alarmText)) {
                 return 'critical';
             }
 
@@ -259,7 +269,7 @@
                 return 'info';
             }
 
-            if (/activated successfully|connected/i.test(alarmText)) {
+            if (/\bactivated successfully|\bconnected/i.test(alarmText)) {
                 return 'success';
             }
 
@@ -371,8 +381,8 @@
                     : '-';
 
                 const alarmText = (parsed.alarm || entry.alarm || '-');
-                const isCriticalAlarm = /lost|disconnected|last down causes|LOS|dying-gasp|dying gasp/i.test(alarmText);
-                const isSuccessAlarm = /activated successfully|connected/i.test(alarmText);
+                const isCriticalAlarm = /lost|disconnected|deactivated successfully|last down causes|LOS|dying-gasp|dying gasp/i.test(alarmText);
+                const isSuccessAlarm = /\bactivated successfully|\bconnected/i.test(alarmText);
                 const isInformationalAlarm = /link was down|link was up/i.test(alarmText);
                 const alarmCell = isCriticalAlarm
                     ? '<span class="text-danger fw-semibold">' + alarmText + '</span>'
